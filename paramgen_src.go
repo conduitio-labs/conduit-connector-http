@@ -9,17 +9,9 @@ import (
 
 func (SourceConfig) Parameters() map[string]sdk.Parameter {
 	return map[string]sdk.Parameter{
-		"global_config_param_name": {
-			Default:     "",
-			Description: "global_config_param_name is named global_config_param_name and needs to be provided by the user.",
-			Type:        sdk.ParameterTypeString,
-			Validations: []sdk.Validation{
-				sdk.ValidationRequired{},
-			},
-		},
 		"url": {
 			Default:     "",
-			Description: "",
+			Description: "url for the http server",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},
