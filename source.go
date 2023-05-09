@@ -1,4 +1,18 @@
-package connectorname
+// Copyright © 2023 Meroxa, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package http
 
 //go:generate paramgen -output=paramgen_src.go SourceConfig
 
@@ -12,15 +26,13 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config           SourceConfig
-	lastPositionRead sdk.Position //nolint:unused // this is just an example
+	config SourceConfig
+	// TODO Add the client reference here so I could close it as part of the Teardown...
 }
 
 type SourceConfig struct {
-	// Config includes parameters that are the same in the source and destination.
-	Config
-	// SourceConfigParam is named foo and must be provided by the user.
-	SourceConfigParam string `json:"foo" validate:"required"`
+	// url for the http server
+	URL string `json:"url" validate:"required"`
 }
 
 func NewSource() sdk.Source {
@@ -59,6 +71,11 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	// last record that was successfully processed, Source should therefore
 	// start producing records after this position. The context passed to Open
 	// will be cancelled once the plugin receives a stop signal from Conduit.
+
+	// TODO: Where to use the HTTP client, etc...
+	// connect to the server
+	// s.config.URL
+
 	return nil
 }
 
@@ -77,6 +94,12 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	// After Read returns an error the function won't be called again (except if
 	// the error is ErrBackoffRetry, as mentioned above).
 	// Read can be called concurrently with Ack.
+
+	// TODO: read data from the source based on the configuration and will return a sdk.Record
+	// TODO: Maybe process what's returned from my dummy server and return it (as a sdk.Record)
+	// elaborate a bit  more existing response.
+
+	// TODO: Use ErrBackoffRetry when there's nothing new to process.
 	return sdk.Record{}, nil
 }
 
@@ -94,5 +117,7 @@ func (s *Source) Teardown(ctx context.Context) error {
 	// Teardown signals to the plugin that there will be no more calls to any
 	// other function. After Teardown returns, the plugin should be ready for a
 	// graceful shutdown.
+
+	// TODO: The opposite to Open (close client, etc...)
 	return nil
 }
