@@ -19,7 +19,7 @@ type Source struct {
 type SourceConfig struct {
 	// Config includes parameters that are the same in the source and destination.
 	Config
-	Url string `json:"url" validate:"required"`
+	URL string `json:"url" validate:"required"`
 }
 
 func NewSource() sdk.Source {
@@ -61,7 +61,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 
 	// TODO: Where to use the HTTP client, etc...
 	// connect to the server
-	// s.config.Url
+	// s.config.URL
 
 	return nil
 }
