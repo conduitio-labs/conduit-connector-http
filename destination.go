@@ -1,4 +1,4 @@
-package connectorname
+package http
 
 //go:generate paramgen -output=paramgen_dest.go DestinationConfig
 

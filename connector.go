@@ -1,4 +1,4 @@
-package connectorname
+package http
 
 import sdk "github.com/conduitio/conduit-connector-sdk"
 

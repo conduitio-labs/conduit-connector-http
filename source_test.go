@@ -1,14 +1,14 @@
-package connectorname_test
+package http_test
 
 import (
 	"context"
 	"testing"
 
-	connectorname "github.com/conduitio/conduit-connector-connectorname"
+	http "github.com/conduitio-labs/conduit-connector-http"
 )
 
 func TestTeardownSource_NoOpen(t *testing.T) {
-	con := connectorname.NewSource()
+	con := http.NewSource()
 	err := con.Teardown(context.Background())
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
