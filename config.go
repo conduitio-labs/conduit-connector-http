@@ -49,6 +49,9 @@ func (s SourceConfig) ParseConfig(cfg map[string]string) (SourceConfig, http.Hea
 	if err != nil {
 		return SourceConfig{}, nil, fmt.Errorf("invalid config: %w", err)
 	}
+	if s.Params != "" {
+		s.URL = s.URL + "?" + s.Params
+	}
 	return s, header, nil
 }
 
