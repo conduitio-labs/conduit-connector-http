@@ -158,11 +158,6 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	// create record
 	now := time.Now().Unix()
 
-	// TODO: make this configurable based on the HTTP source so we know what record to create
-	message, ok := structData["message"]
-	if !ok {
-		return sdk.Record{}, fmt.Errorf("message field not found in record: %w", err)
-	}
 	rec := sdk.Record{
 		Payload: sdk.Change{
 			Before: nil,
@@ -170,7 +165,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 		},
 		Operation: sdk.OperationCreate,
 		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-		Key:       sdk.RawData(fmt.Sprintf("%v", message)),
+		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
 	}
 	return rec, nil
 }
