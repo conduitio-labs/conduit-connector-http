@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"golang.org/x/time/rate"
 )
 
 type Source struct {
