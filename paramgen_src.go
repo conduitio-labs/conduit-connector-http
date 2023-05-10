@@ -9,9 +9,15 @@ import (
 
 func (SourceConfig) Parameters() map[string]sdk.Parameter {
 	return map[string]sdk.Parameter{
+		"pollingPeriod": {
+			Default:     "5m",
+			Description: "",
+			Type:        sdk.ParameterTypeDuration,
+			Validations: []sdk.Validation{},
+		},
 		"url": {
 			Default:     "",
-			Description: "url for the http server",
+			Description: "",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},

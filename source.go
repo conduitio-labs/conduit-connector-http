@@ -18,7 +18,12 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"golang.org/x/time/rate"
+	"io"
+	"net/http"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
@@ -26,13 +31,14 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config SourceConfig
-	// TODO Add the client reference here so I could close it as part of the Teardown...
+	config  SourceConfig
+	client  *http.Client
+	limiter *rate.Limiter
 }
 
 type SourceConfig struct {
-	// url for the http server
-	URL string `json:"url" validate:"required"`
+	URL           string        `json:"url" validate:"required"`
+	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
 }
 
 func NewSource() sdk.Source {
@@ -72,9 +78,23 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	// start producing records after this position. The context passed to Open
 	// will be cancelled once the plugin receives a stop signal from Conduit.
 
-	// TODO: Where to use the HTTP client, etc...
-	// connect to the server
-	// s.config.URL
+	s.client = &http.Client{}
+
+	// check connection
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, s.config.URL, nil)
+	if err != nil {
+		return fmt.Errorf("error creating HTTP request %q: %w", s.config.URL, err)
+	}
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("authorization failed, check your key")
+	}
+
+	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
 
 	return nil
 }
@@ -95,12 +115,64 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	// the error is ErrBackoffRetry, as mentioned above).
 	// Read can be called concurrently with Ack.
 
-	// TODO: read data from the source based on the configuration and will return a sdk.Record
-	// TODO: Maybe process what's returned from my dummy server and return it (as a sdk.Record)
-	// elaborate a bit  more existing response.
-
 	// TODO: Use ErrBackoffRetry when there's nothing new to process.
+	err := s.limiter.Wait(ctx)
+	if err != nil {
+		return sdk.Record{}, err
+	}
+	rec, err := s.getRecord(ctx)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
+	}
+	return rec, nil
 	return sdk.Record{}, nil
+}
+
+func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
+	// create GET request
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.config.URL, nil)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("error creating HTTP request: %w", err)
+	}
+	// get response
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("error getting data from URL: %w", err)
+	}
+	defer resp.Body.Close()
+	// check response status
+	if resp.StatusCode != http.StatusOK {
+		return sdk.Record{}, fmt.Errorf("response status should be %v, got status=%v", http.StatusOK, resp.StatusCode)
+	}
+	// read body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
+	}
+	// parse json
+	var structData sdk.StructuredData
+	err = json.Unmarshal(body, &structData)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("failed to unmarshal body as JSON: %w", err)
+	}
+	// create record
+	now := time.Now().Unix()
+
+	// TODO: make this configurable based on the HTTP source so we know what record to create
+	message, ok := structData["message"]
+	if !ok {
+		return sdk.Record{}, fmt.Errorf("message field not found in record: %w", err)
+	}
+	rec := sdk.Record{
+		Payload: sdk.Change{
+			Before: nil,
+			After:  structData,
+		},
+		Operation: sdk.OperationCreate,
+		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
+		Key:       sdk.RawData(fmt.Sprintf("%v", message)),
+	}
+	return rec, nil
 }
 
 func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
@@ -118,6 +190,8 @@ func (s *Source) Teardown(ctx context.Context) error {
 	// other function. After Teardown returns, the plugin should be ready for a
 	// graceful shutdown.
 
-	// TODO: The opposite to Open (close client, etc...)
+	if s.client != nil {
+		s.client.CloseIdleConnections()
+	}
 	return nil
 }
