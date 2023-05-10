@@ -34,21 +34,7 @@ type Source struct {
 	config  SourceConfig
 	client  *http.Client
 	limiter *rate.Limiter
-}
-
-type SourceConfig struct {
-	// Http url to use in the request
-	URL string `json:"url" validate:"required"`
-	// how often the connector will get data from the url
-	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
-	// Http method to use in the request
-	Method string `default:"GET" validate:"inclusion=GET|POST|PUT|DELETE|PATCH|HEAD|CONNECT|OPTIONS|TRACE"`
-	// Http headers to use in the request, comma separated list of : separated pairs
-	Headers string
-	// parameters to use in the request, & separated list of = separated pairs
-	Params string
-	// Http body to use in the request
-	Body string
+	header  http.Header
 }
 
 func NewSource() sdk.Source {
@@ -61,10 +47,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	sdk.Logger(ctx).Info().Msg("Configuring Source...")
-	err := sdk.Util.ParseConfig(cfg, &s.config)
+	config, header, err := s.config.ParseConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+	s.config = config
+	s.header = header
 	return nil
 }
 
@@ -77,6 +65,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	if err != nil {
 		return fmt.Errorf("error creating HTTP request %q: %w", s.config.URL, err)
 	}
+	req.Header = s.header
 	resp, err := s.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
@@ -125,6 +114,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error creating HTTP request: %w", err)
 	}
+	req.Header = s.header
 	// get response
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -141,7 +131,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
 	}
 	// parse json
-	var structData sdk.StructuredData
+	var structData []sdk.StructuredData
 	err = json.Unmarshal(body, &structData)
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("failed to unmarshal body as JSON: %w", err)
@@ -152,7 +142,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	rec := sdk.Record{
 		Payload: sdk.Change{
 			Before: nil,
-			After:  structData,
+			After:  structData[0],
 		},
 		Operation: sdk.OperationCreate,
 		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
