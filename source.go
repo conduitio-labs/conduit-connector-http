@@ -18,7 +18,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -130,19 +129,13 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
 	}
-	// parse json
-	var structData []sdk.StructuredData
-	err = json.Unmarshal(body, &structData)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("failed to unmarshal body as JSON: %w", err)
-	}
 	// create record
 	now := time.Now().Unix()
 
 	rec := sdk.Record{
 		Payload: sdk.Change{
 			Before: nil,
-			After:  structData[0],
+			After:  sdk.RawData(body),
 		},
 		Operation: sdk.OperationCreate,
 		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
