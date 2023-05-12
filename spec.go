@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package http
+package discord
 
 import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -25,9 +25,9 @@ var version = "(devel)"
 // Specification returns the connector's specification.
 func Specification() sdk.Specification {
 	return sdk.Specification{
-		Name:        "http",
-		Summary:     "HTTP source connector",
-		Description: "a conduit HTTP source connector that reads from an HTTP server",
+		Name:        "discord",
+		Summary:     "discord source connector",
+		Description: "a conduit discord source connector that reads messages from a discord server",
 		Version:     version,
 		Author:      "Meroxa, Inc.",
 	}

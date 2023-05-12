@@ -1,4 +1,4 @@
-module github.com/conduitio-labs/conduit-connector-http
+module github.com/conduitio-labs/conduit-connector-discord
 
 go 1.20
 

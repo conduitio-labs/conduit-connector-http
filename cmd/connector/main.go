@@ -17,9 +17,9 @@ package main
 import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 
-	http "github.com/conduitio-labs/conduit-connector-http"
+	discord "github.com/conduitio-labs/conduit-connector-discord"
 )
 
 func main() {
-	sdk.Serve(http.Connector)
+	sdk.Serve(discord.Connector)
 }
