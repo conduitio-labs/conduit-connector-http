@@ -1,8 +1,13 @@
 module github.com/conduitio-labs/conduit-connector-discord
 
-go 1.20
+go 1.21
 
-require github.com/conduitio/conduit-connector-sdk v0.6.0
+toolchain go1.21.1
+
+require (
+	github.com/conduitio/conduit-connector-sdk v0.6.0
+	golang.org/x/time v0.3.0
+)
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -36,7 +41,6 @@ require (
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.29.1 // indirect
