@@ -38,6 +38,10 @@ type SourceConfig struct {
 	Params string
 	// Http body to use in the request
 	Body string
+
+	GetRequestDataScript string `json:"script.getRequestData"`
+	// The path to a .js file containing the processor code.
+	ParseResponseScript string `json:"script.parseResponse"`
 }
 
 func (s SourceConfig) ParseConfig(cfg map[string]string) (SourceConfig, http.Header, error) {

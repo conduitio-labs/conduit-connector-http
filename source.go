@@ -27,6 +27,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+type requestData struct {
+	URL string
+}
+
 type Source struct {
 	sdk.UnimplementedSource
 
@@ -34,10 +38,12 @@ type Source struct {
 	client  *http.Client
 	limiter *rate.Limiter
 	header  http.Header
+
+	jsHelper *jsHelper
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(&Source{})
+	return sdk.SourceWithMiddleware(&Source{jsHelper: newJSHelper()})
 }
 
 func (s *Source) Parameters() map[string]sdk.Parameter {
@@ -52,6 +58,8 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	}
 	s.config = config
 	s.header = header
+	s.jsHelper.getRequestDataSrc = s.config.GetRequestDataScript
+	s.jsHelper.parseResponseSrc = s.config.ParseResponseScript
 	return nil
 }
 
@@ -60,41 +68,21 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	s.client = &http.Client{}
 
 	// check connection
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, s.config.URL, nil)
+	_, err := http.NewRequestWithContext(ctx, http.MethodHead, s.config.URL, nil)
 	if err != nil {
 		return fmt.Errorf("error creating HTTP request %q: %w", s.config.URL, err)
 	}
-	req.Header = s.header
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("authorization failed, check your key")
-	}
 
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
+	err = s.jsHelper.Open(ctx)
+	if err != nil {
+		return fmt.Errorf("failed initializing JS helper: %w", err)
+	}
 
 	return nil
 }
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
-	// Read returns a new Record and is supposed to block until there is either
-	// a new record or the context gets cancelled. It can also return the error
-	// ErrBackoffRetry to signal to the SDK it should call Read again with a
-	// backoff retry.
-	// If Read receives a cancelled context or the context is cancelled while
-	// Read is running it must stop retrieving new records from the source
-	// system and start returning records that have already been buffered. If
-	// there are no buffered records left Read must return the context error to
-	// signal a graceful stop. If Read returns ErrBackoffRetry while the context
-	// is cancelled it will also signal that there are no records left and Read
-	// won't be called again.
-	// After Read returns an error the function won't be called again (except if
-	// the error is ErrBackoffRetry, as mentioned above).
-	// Read can be called concurrently with Ack.
-
 	// TODO: Use ErrBackoffRetry when there's nothing new to process.
 	err := s.limiter.Wait(ctx)
 	if err != nil {
@@ -108,8 +96,13 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 }
 
 func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
+	// input: config, position
+	// output: request = URL + Headers
+
 	// create GET request
-	req, err := http.NewRequestWithContext(ctx, s.config.Method, s.config.URL, nil)
+	reqData, _ := s.jsHelper.getRequestData(ctx, s.config)
+
+	req, err := http.NewRequestWithContext(ctx, s.config.Method, reqData.URL, nil)
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error creating HTTP request: %w", err)
 	}
