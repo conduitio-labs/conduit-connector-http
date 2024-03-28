@@ -36,7 +36,7 @@ type Source struct {
 	jsHelper          *jsHelper
 	lastResponseStuff map[string]any
 	buffer            []sdk.Record
-	position          sdk.Position
+	lastPosition      sdk.Position
 }
 
 func NewSource() sdk.Source {
@@ -80,7 +80,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 		return fmt.Errorf("failed initializing JS helper: %w", err)
 	}
 
-	s.position = pos
+	s.lastPosition = pos
 
 	return nil
 }
@@ -99,7 +99,7 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 }
 
 func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
-	// input: config, position
+	// input: config, lastPosition
 	// output: request = URL + Headers
 	if len(s.buffer) == 0 {
 		err := s.fillBuffer(ctx)
@@ -115,6 +115,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	rec := s.buffer[0]
 	s.buffer = s.buffer[1:]
 
+	s.lastPosition = rec.Position
 	return rec, nil
 }
 
@@ -133,7 +134,7 @@ func (s *Source) Teardown(ctx context.Context) error {
 func (s *Source) fillBuffer(ctx context.Context) error {
 	sdk.Logger(ctx).Info().Msg("filling buffer")
 	// create request
-	reqData, err := s.jsHelper.getRequestData(ctx, s.config, s.lastResponseStuff, s.position)
+	reqData, err := s.jsHelper.getRequestData(ctx, s.config, s.lastResponseStuff, s.lastPosition)
 	if err != nil {
 		return err
 	}

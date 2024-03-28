@@ -16,6 +16,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
@@ -35,7 +36,14 @@ func TestTeardownSource_NoOpen(t *testing.T) {
 func TestSource_Read_Connections(t *testing.T) {
 	is := is.New(t)
 	ctx := zerolog.New(zerolog.NewTestWriter(t)).WithContext(context.Background())
-	token := "ya29.a0Ad52N38SR_KyZk_B0D1cmBo_Afb8OU_MA19aLii8ZSi5BD4zPmM7ZVvTjP25jqaJmrYFfDSDX6kqBmWwbonoTyILPf9hwCDq3xD-Wy1-Yx8zFaG-TtORtv2uqz3ceWJhfXAvGTaNu8afKxrRM4C0-WfGy2GL0FB6K-ybaCgYKAVYSARMSFQHGX2MiOBgz3Iu8279vZMJisK_yqg0171"
+
+	tokenBytes, err := os.ReadFile("/home/haris/GolandProjects/go-playground/token.json")
+	is.NoErr(err)
+
+	tokenMap := map[string]string{}
+	is.NoErr(json.Unmarshal(tokenBytes, &tokenMap))
+
+	token := tokenMap["access_token"]
 
 	getRequestScript, err := os.ReadFile("get_request_data.js")
 	is.NoErr(err)
@@ -57,7 +65,7 @@ func TestSource_Read_Connections(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		rec, err := conn.Read(ctx)
 		is.NoErr(err)
-		fmt.Println("got position: " + string(rec.Position))
+		fmt.Println("got record with position: " + string(rec.Position))
 	}
 
 	is.NoErr(conn.Teardown(ctx))
