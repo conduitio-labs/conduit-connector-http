@@ -17,6 +17,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"github.com/dop251/goja_nodejs/url"
 	"github.com/rs/zerolog"
 	"sync"
 
@@ -29,6 +30,15 @@ var (
 	getRequestDataFn = "getRequestData"
 	parseResponseFn  = "parseResponse"
 )
+
+type requestData struct {
+	URL string
+}
+
+type responseData struct {
+	Stuff   map[string]any
+	Records []*jsRecord
+}
 
 // jsRecord is an intermediary representation of opencdc.Record that is passed to
 // the JavaScript transform. We use this because using opencdc.Record would not
@@ -86,7 +96,7 @@ func (h *jsHelper) Open(ctx context.Context) error {
 		// create a new runtime for the function, so it's executed in a separate goja context
 		rt, _ := h.newRuntime(sdk.Logger(ctx))
 		getFn, _ := h.newFunction(rt, h.getRequestDataSrc, getRequestDataFn)
-		parseFn, _ := h.newFunction(rt, h.getRequestDataSrc, parseResponseFn)
+		parseFn, _ := h.newFunction(rt, h.parseResponseSrc, parseResponseFn)
 		return &gojaContext{
 			runtime:          rt,
 			getRequestDataFn: getFn,
@@ -97,12 +107,16 @@ func (h *jsHelper) Open(ctx context.Context) error {
 	return nil
 }
 
-func (h *jsHelper) getRequestData(ctx context.Context, cfg SourceConfig) (*requestData, error) {
+func (h *jsHelper) getRequestData(ctx context.Context, cfg SourceConfig, stuff map[string]any, position sdk.Position) (*requestData, error) {
 	gojaCtx := h.gojaPool.Get().(*gojaContext)
 	defer h.gojaPool.Put(gojaCtx)
 
-	result, err := gojaCtx.getRequestDataFn(goja.Undefined(), gojaCtx.runtime.ToValue(cfg))
-	sdk.Logger(ctx).Info().Any("result", result).Msg("got result")
+	result, err := gojaCtx.getRequestDataFn(
+		goja.Undefined(),
+		gojaCtx.runtime.ToValue(cfg),
+		gojaCtx.runtime.ToValue(stuff),
+		gojaCtx.runtime.ToValue(position),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -115,13 +129,35 @@ func (h *jsHelper) getRequestData(ctx context.Context, cfg SourceConfig) (*reque
 	return rd, nil
 }
 
+func (h *jsHelper) parseResponseData(ctx context.Context, response []byte) (*responseData, error) {
+	gojaCtx := h.gojaPool.Get().(*gojaContext)
+	defer h.gojaPool.Put(gojaCtx)
+
+	result, err := gojaCtx.parseResponseFn(goja.Undefined(), gojaCtx.runtime.ToValue(response))
+	if err != nil {
+		return nil, err
+	}
+
+	rd, ok := result.Export().(*responseData)
+	if !ok {
+		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &responseData{}, result)
+	}
+
+	return rd, nil
+}
+
 func (h *jsHelper) newRuntime(logger *zerolog.Logger) (*goja.Runtime, error) {
 	rt := goja.New()
 	require.NewRegistry().Enable(rt)
+	url.Enable(rt)
 
 	runtimeHelpers := map[string]interface{}{
-		"logger":      &logger,
-		"RequestData": h.newRequestData(rt),
+		"logger":         &logger,
+		"Record":         h.newJSRecord(rt),
+		"RawData":        h.jsContentRaw(rt),
+		"StructuredData": h.jsContentStructured(rt),
+		"RequestData":    h.newRequestData(rt),
+		"ResponseData":   h.newResponseData(rt),
 	}
 
 	for name, helper := range runtimeHelpers {
@@ -131,6 +167,44 @@ func (h *jsHelper) newRuntime(logger *zerolog.Logger) (*goja.Runtime, error) {
 	}
 
 	return rt, nil
+}
+
+func (h *jsHelper) jsContentRaw(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+	return func(call goja.ConstructorCall) *goja.Object {
+		var r sdk.RawData
+		if len(call.Arguments) > 0 {
+			r = sdk.RawData((call.Argument(0).String()))
+		}
+		// We need to return a pointer to make the returned object mutable.
+		return runtime.ToValue(&r).ToObject(runtime)
+	}
+}
+
+func (h *jsHelper) jsContentStructured(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+	return func(call goja.ConstructorCall) *goja.Object {
+		// TODO accept arguments
+		// We return a map[string]interface{} struct, however because we are
+		// not changing call.This instanceof will not work as expected.
+
+		r := make(map[string]interface{})
+		return runtime.ToValue(r).ToObject(runtime)
+	}
+}
+
+func (h *jsHelper) newJSRecord(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+	return func(call goja.ConstructorCall) *goja.Object {
+		// We return a singleRecord struct, however because we are
+		// not changing call.This instanceof will not work as expected.
+
+		// JavaScript records are always initialized with metadata
+		// so that it's easier to write processor code
+		// (without worrying about initializing it every time)
+		r := jsRecord{
+			Metadata: make(map[string]string),
+		}
+		// We need to return a pointer to make the returned object mutable.
+		return runtime.ToValue(&r).ToObject(runtime)
+	}
 }
 
 func (h *jsHelper) newFunction(runtime *goja.Runtime, src string, fnName string) (goja.Callable, error) {
@@ -155,13 +229,17 @@ func (h *jsHelper) newFunction(runtime *goja.Runtime, src string, fnName string)
 
 func (h *jsHelper) newRequestData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
-		// We return a singleRecord struct, however because we are
-		// not changing call.This instanceof will not work as expected.
-
-		// JavaScript records are always initialized with metadata
-		// so that it's easier to write processor code
-		// (without worrying about initializing it every time)
 		r := requestData{}
+		// We need to return a pointer to make the returned object mutable.
+		return runtime.ToValue(&r).ToObject(runtime)
+	}
+}
+
+func (h *jsHelper) newResponseData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+	return func(call goja.ConstructorCall) *goja.Object {
+		r := responseData{
+			Stuff: map[string]any{},
+		}
 		// We need to return a pointer to make the returned object mutable.
 		return runtime.ToValue(&r).ToObject(runtime)
 	}

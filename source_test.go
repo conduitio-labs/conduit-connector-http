@@ -16,7 +16,11 @@ package http
 
 import (
 	"context"
+	"fmt"
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
+	"github.com/rs/zerolog"
+	"os"
 	"testing"
 )
 
@@ -28,23 +32,33 @@ func TestTeardownSource_NoOpen(t *testing.T) {
 	}
 }
 
-func TestSource_Read_Gmail(t *testing.T) {
+func TestSource_Read_Connections(t *testing.T) {
 	is := is.New(t)
-	ctx := context.Background()
+	ctx := zerolog.New(zerolog.NewTestWriter(t)).WithContext(context.Background())
+	token := "ya29.a0Ad52N38SR_KyZk_B0D1cmBo_Afb8OU_MA19aLii8ZSi5BD4zPmM7ZVvTjP25jqaJmrYFfDSDX6kqBmWwbonoTyILPf9hwCDq3xD-Wy1-Yx8zFaG-TtORtv2uqz3ceWJhfXAvGTaNu8afKxrRM4C0-WfGy2GL0FB6K-ybaCgYKAVYSARMSFQHGX2MiOBgz3Iu8279vZMJisK_yqg0171"
+
+	getRequestScript, err := os.ReadFile("get_request_data.js")
+	is.NoErr(err)
+
+	parseResponseScript, err := os.ReadFile("parse_response.js")
+	is.NoErr(err)
 
 	cfg := map[string]string{
-		"url": "https://gmail.googleapis.com/gmail/v1/users/muslim156@gmail.com/messages",
-		"script.getRequestData": `
-function getRequestData(cfg) {
-	let data = new RequestData()
-	data.URL = "https://gmail.googleapis.com/gmail/v1/users/muslim156@gmail.com/messages?access_token=ya29.a0Ad52N38gL8W075jtDXyJP3ADp57Eoq-VkwQDi4dqw-dHPWdwuWmk5R-lYtLJWZJ_MP0z9UVpEl9g05ZS0KpyWvbt2R4dSRbBY1ny9h5x6v6PwtIUU9XVTg4K6OJiVkZUYa1yi5fBn0uH80_VSOVNe5xkhEpHv-ueGNclaCgYKASMSARMSFQHGX2MifgkXdC1HwfewF47GPkawag0171"
-	return data
-}`,
+		"url":                   "https://gmail.googleapis.com/gmail/v1/users/muslim156@gmail.com/messages",
+		"headers":               "Authorization: Bearer " + token,
+		"script.getRequestData": string(getRequestScript),
+		"script.parseResponse":  string(parseResponseScript),
 	}
 
 	conn := NewSource()
 	is.NoErr(conn.Configure(ctx, cfg))
-	is.NoErr(conn.Open(ctx, nil))
-	_, err := conn.Read(ctx)
-	is.NoErr(err)
+	is.NoErr(conn.Open(ctx, sdk.Position("MisA-QgvlQAAABII0vyq5K-XhQMQ0vyq5K-XhQPJ55wmBJDhWn3r0s5QoqQNOiQ2NjA0N2U3MC0wMDAwLTJkYTMtYmU4Ny0wMDFhMTE0ZDM1Yjg=")))
+
+	for i := 0; i < 10; i++ {
+		rec, err := conn.Read(ctx)
+		is.NoErr(err)
+		fmt.Println("got position: " + string(rec.Position))
+	}
+
+	is.NoErr(conn.Teardown(ctx))
 }

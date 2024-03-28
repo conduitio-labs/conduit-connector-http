@@ -19,17 +19,11 @@ package http
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"time"
-
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"golang.org/x/time/rate"
+	"io"
+	"net/http"
 )
-
-type requestData struct {
-	URL string
-}
 
 type Source struct {
 	sdk.UnimplementedSource
@@ -39,11 +33,17 @@ type Source struct {
 	limiter *rate.Limiter
 	header  http.Header
 
-	jsHelper *jsHelper
+	jsHelper          *jsHelper
+	lastResponseStuff map[string]any
+	buffer            []sdk.Record
+	position          sdk.Position
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(&Source{jsHelper: newJSHelper()})
+	return sdk.SourceWithMiddleware(&Source{
+		jsHelper:          newJSHelper(),
+		lastResponseStuff: map[string]any{},
+	})
 }
 
 func (s *Source) Parameters() map[string]sdk.Parameter {
@@ -74,10 +74,13 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
+
 	err = s.jsHelper.Open(ctx)
 	if err != nil {
 		return fmt.Errorf("failed initializing JS helper: %w", err)
 	}
+
+	s.position = pos
 
 	return nil
 }
@@ -98,42 +101,20 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	// input: config, position
 	// output: request = URL + Headers
+	if len(s.buffer) == 0 {
+		err := s.fillBuffer(ctx)
+		if err != nil {
+			return sdk.Record{}, err
+		}
+	}
 
-	// create GET request
-	reqData, _ := s.jsHelper.getRequestData(ctx, s.config)
+	if len(s.buffer) == 0 {
+		return sdk.Record{}, sdk.ErrBackoffRetry
+	}
 
-	req, err := http.NewRequestWithContext(ctx, s.config.Method, reqData.URL, nil)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error creating HTTP request: %w", err)
-	}
-	req.Header = s.header
-	// get response
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error getting data from URL: %w", err)
-	}
-	defer resp.Body.Close()
-	// check response status
-	if resp.StatusCode != http.StatusOK {
-		return sdk.Record{}, fmt.Errorf("response status should be %v, got status=%v", http.StatusOK, resp.StatusCode)
-	}
-	// read body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
-	}
-	// create record
-	now := time.Now().Unix()
+	rec := s.buffer[0]
+	s.buffer = s.buffer[1:]
 
-	rec := sdk.Record{
-		Payload: sdk.Change{
-			Before: nil,
-			After:  sdk.RawData(body),
-		},
-		Operation: sdk.OperationCreate,
-		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
-	}
 	return rec, nil
 }
 
@@ -146,5 +127,72 @@ func (s *Source) Teardown(ctx context.Context) error {
 	if s.client != nil {
 		s.client.CloseIdleConnections()
 	}
+	return nil
+}
+
+func (s *Source) fillBuffer(ctx context.Context) error {
+	sdk.Logger(ctx).Info().Msg("filling buffer")
+	// create request
+	reqData, err := s.jsHelper.getRequestData(ctx, s.config, s.lastResponseStuff, s.position)
+	if err != nil {
+		return err
+	}
+
+	sdk.Logger(ctx).Info().Msg("request URL: " + reqData.URL)
+	req, err := http.NewRequestWithContext(ctx, s.config.Method, reqData.URL, nil)
+	if err != nil {
+		return fmt.Errorf("error creating HTTP request: %w", err)
+	}
+	req.Header = s.header
+
+	// get response
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error getting data from URL: %w", err)
+	}
+	defer resp.Body.Close()
+	// check response status
+	if resp.StatusCode != http.StatusOK {
+		errorMsg := "unknown"
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			errorMsg = string(body)
+		}
+
+		return fmt.Errorf(
+			"response status should be %v, got status=%v, cause=%v",
+			http.StatusOK,
+			resp.StatusCode,
+			errorMsg,
+		)
+	}
+
+	// read body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading body for response %v: %w", resp, err)
+	}
+
+	respData, err := s.jsHelper.parseResponseData(ctx, body)
+	if err != nil {
+		return err
+	}
+
+	s.lastResponseStuff = respData.Stuff
+
+	for _, jsRec := range respData.Records {
+		_ = jsRec
+		s.buffer = append(
+			s.buffer,
+			sdk.Record{
+				Payload: sdk.Change{
+					After: jsRec.Payload.After.(*sdk.RawData),
+				},
+				Position: jsRec.Position,
+				Key:      jsRec.Key.(*sdk.RawData),
+			},
+		)
+	}
+
 	return nil
 }
