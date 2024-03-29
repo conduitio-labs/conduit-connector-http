@@ -195,6 +195,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 
 	s.lastResponseStuff = respData.Stuff
 
+	sdk.Logger(ctx).Info().Msg("parsing JS records into SDK records")
 	for _, jsRec := range respData.Records {
 		_ = jsRec
 		s.buffer = append(

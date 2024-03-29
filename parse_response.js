@@ -23,6 +23,8 @@ function parseResponse(bytes) {
         }
     }
 
+    logger.Info().Msg("[parseResponse] parsed records")
+
     var resp = new ResponseData()
     resp.Stuff["nextPageToken"] = data["nextPageToken"]
     resp.Records = records
