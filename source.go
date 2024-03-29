@@ -204,14 +204,12 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		_ = jsRec
 		s.buffer = append(
 			s.buffer,
-			sdk.Record{
-				Operation: sdk.OperationCreate,
-				Payload: sdk.Change{
-					After: jsRec.Payload.After.(*sdk.RawData),
-				},
-				Position: jsRec.Position,
-				Key:      jsRec.Key.(*sdk.RawData),
-			},
+			sdk.SourceUtil{}.NewRecordCreate(
+				jsRec.Position,
+				nil,
+				jsRec.Key.(*sdk.RawData),
+				jsRec.Payload.After.(*sdk.RawData),
+			),
 		)
 	}
 
