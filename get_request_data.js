@@ -5,10 +5,10 @@ function getRequestData(cfg, stuff, position) {
         url.searchParams.set("pageToken", stuff["nextPageToken"])
     } else {
         var positionStr = String.fromCharCode.apply(String, position);
-        url.searchParams.set("syncToken", positionStr)
+        url.searchParams.set("syncToken", positionStr.split("_people")[0])
     }
 
-    url.searchParams.set("pageSize", 10)
+    url.searchParams.set("pageSize", 2)
     url.searchParams.set("personFields", "names")
     url.searchParams.set("requestSyncToken", true)
 

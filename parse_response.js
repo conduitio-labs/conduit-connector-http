@@ -18,7 +18,7 @@ function parseResponse(bytes) {
     if (data.connections != undefined) {
         for (const conn of data.connections) {
             let rec = connectionToRecord(conn)
-            rec.Position = data.nextSyncToken
+            rec.Position = data.nextSyncToken + "_" + conn.resourceName
             records.push(rec);
         }
     }

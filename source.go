@@ -102,11 +102,6 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	sdk.Logger(ctx).Info().Msg("source read called")
 
-	// TODO: Use ErrBackoffRetry when there's nothing new to process.
-	err := s.limiter.Wait(ctx)
-	if err != nil {
-		return sdk.Record{}, err
-	}
 	rec, err := s.getRecord(ctx)
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
@@ -120,7 +115,12 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	// input: config, lastPosition
 	// output: request = URL + Headers
 	if len(s.buffer) == 0 {
-		err := s.fillBuffer(ctx)
+		err := s.limiter.Wait(ctx)
+		if err != nil {
+			return sdk.Record{}, err
+		}
+
+		err = s.fillBuffer(ctx)
 		if err != nil {
 			return sdk.Record{}, err
 		}
