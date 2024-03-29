@@ -5,11 +5,11 @@ go 1.21.1
 toolchain go1.22.0
 
 require (
-	github.com/conduitio/conduit-connector-sdk v0.6.0
+	github.com/conduitio/conduit-connector-sdk v0.8.0
 	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204
 	github.com/dop251/goja_nodejs v0.0.0-20240221231712-27eeffc9c235
 	github.com/matryer/is v1.4.1
-	github.com/rs/zerolog v1.29.0
+	github.com/rs/zerolog v1.31.0
 	golang.org/x/time v0.5.0
 )
 
