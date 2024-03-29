@@ -26,8 +26,8 @@ var version = "(devel)"
 func Specification() sdk.Specification {
 	return sdk.Specification{
 		Name:        "http",
-		Summary:     "HTTP source connector",
-		Description: "a conduit HTTP source connector that reads from an HTTP server",
+		Summary:     "HTTP source and destination connectors for Conduit.",
+		Description: "Conduit HTTP source and destination connectors, they connect to an HTTP URL and send HTTP requests.",
 		Version:     version,
 		Author:      "Meroxa, Inc.",
 	}

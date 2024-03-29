@@ -7,7 +7,7 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-func (SourceConfig) Parameters() map[string]sdk.Parameter {
+func (DestinationConfig) Parameters() map[string]sdk.Parameter {
 	return map[string]sdk.Parameter{
 		"headers": {
 			Default:     "",
@@ -16,23 +16,17 @@ func (SourceConfig) Parameters() map[string]sdk.Parameter {
 			Validations: []sdk.Validation{},
 		},
 		"method": {
-			Default:     "GET",
+			Default:     "POST",
 			Description: "Http method to use in the request",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
-				sdk.ValidationInclusion{List: []string{"GET", "HEAD", "OPTIONS"}},
+				sdk.ValidationInclusion{List: []string{"POST", "PUT", "DELETE", "PATCH"}},
 			},
 		},
 		"params": {
 			Default:     "",
 			Description: "parameters to use in the request, & separated list of = separated pairs",
 			Type:        sdk.ParameterTypeString,
-			Validations: []sdk.Validation{},
-		},
-		"pollingPeriod": {
-			Default:     "5m",
-			Description: "how often the connector will get data from the url",
-			Type:        sdk.ParameterTypeDuration,
 			Validations: []sdk.Validation{},
 		},
 		"url": {

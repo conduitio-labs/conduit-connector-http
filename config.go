@@ -14,48 +14,22 @@
 
 package http
 
-//go:generate paramgen -output=paramgen_src.go SourceConfig
-
 import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
-
-	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-type SourceConfig struct {
-	// Http url to use in the request
+type Config struct {
+	// Http url to send requests to
 	URL string `json:"url" validate:"required"`
-	// how often the connector will get data from the url
-	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
-	// Http method to use in the request
-	Method string `default:"GET" validate:"inclusion=GET|POST|PUT|DELETE|PATCH|HEAD|CONNECT|OPTIONS|TRACE"`
 	// Http headers to use in the request, comma separated list of : separated pairs
 	Headers []string
 	// parameters to use in the request, & separated list of = separated pairs
 	Params string
-	// Http body to use in the request
-	Body string
 }
 
-func (s SourceConfig) ParseConfig(cfg map[string]string) (SourceConfig, http.Header, error) {
-	err := sdk.Util.ParseConfig(cfg, &s)
-	if err != nil {
-		return SourceConfig{}, nil, fmt.Errorf("invalid config: %w", err)
-	}
-	header, err := s.parseHeaders()
-	if err != nil {
-		return SourceConfig{}, nil, fmt.Errorf("invalid config: %w", err)
-	}
-	if s.Params != "" {
-		s.URL = s.URL + "?" + s.Params
-	}
-	return s, header, nil
-}
-
-func (s SourceConfig) parseHeaders() (http.Header, error) {
+func (s Config) getHeader() (http.Header, error) {
 	// create a new empty header
 	header := http.Header{}
 

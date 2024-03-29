@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -36,6 +37,14 @@ type Source struct {
 	header  http.Header
 }
 
+type SourceConfig struct {
+	Config
+	// how often the connector will get data from the url
+	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
+	// Http method to use in the request
+	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
+}
+
 func NewSource() sdk.Source {
 	return sdk.SourceWithMiddleware(&Source{})
 }
@@ -46,12 +55,25 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	sdk.Logger(ctx).Info().Msg("Configuring Source...")
-	config, header, err := s.config.ParseConfig(cfg)
+
+	var config SourceConfig
+	err := sdk.Util.ParseConfig(cfg, &config)
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+	if s.config.Params != "" && strings.Contains(s.config.Params, "") {
+		if strings.Contains(s.config.URL, "?") {
+			s.config.URL = s.config.URL + s.config.Params
+		} else {
+			s.config.URL = s.config.URL + "?" + s.config.Params
+		}
+	}
+	s.header, err = config.Config.getHeader()
+	if err != nil {
+		return fmt.Errorf("invalid header config: %w", err)
+	}
 	s.config = config
-	s.header = header
+
 	return nil
 }
 
@@ -71,31 +93,18 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("authorization failed, check your key")
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %w", err)
+		}
+		return fmt.Errorf("authorization failed, %s: %s", http.StatusText(http.StatusUnauthorized), string(body))
 	}
-
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
 
 	return nil
 }
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
-	// Read returns a new Record and is supposed to block until there is either
-	// a new record or the context gets cancelled. It can also return the error
-	// ErrBackoffRetry to signal to the SDK it should call Read again with a
-	// backoff retry.
-	// If Read receives a cancelled context or the context is cancelled while
-	// Read is running it must stop retrieving new records from the source
-	// system and start returning records that have already been buffered. If
-	// there are no buffered records left Read must return the context error to
-	// signal a graceful stop. If Read returns ErrBackoffRetry while the context
-	// is cancelled it will also signal that there are no records left and Read
-	// won't be called again.
-	// After Read returns an error the function won't be called again (except if
-	// the error is ErrBackoffRetry, as mentioned above).
-	// Read can be called concurrently with Ack.
-
-	// TODO: Use ErrBackoffRetry when there's nothing new to process.
 	err := s.limiter.Wait(ctx)
 	if err != nil {
 		return sdk.Record{}, err
@@ -129,14 +138,20 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
 	}
+	// add response header to metadata
+	meta := sdk.Metadata{}
+	for key, val := range resp.Header {
+		meta[key] = strings.Join(val, ",")
+	}
+
 	// create record
 	now := time.Now().Unix()
-
 	rec := sdk.Record{
 		Payload: sdk.Change{
 			Before: nil,
 			After:  sdk.RawData(body),
 		},
+		Metadata:  meta,
 		Operation: sdk.OperationCreate,
 		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
 		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
@@ -149,7 +164,7 @@ func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
 	return nil
 }
 
-func (s *Source) Teardown(ctx context.Context) error {
+func (s *Source) Teardown(context.Context) error {
 	if s.client != nil {
 		s.client.CloseIdleConnections()
 	}
