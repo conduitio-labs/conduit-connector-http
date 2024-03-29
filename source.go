@@ -101,7 +101,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	sdk.Logger(ctx).Info().Msg("source read called")
-	
+
 	// TODO: Use ErrBackoffRetry when there's nothing new to process.
 	err := s.limiter.Wait(ctx)
 	if err != nil {
@@ -201,7 +201,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 
 	s.lastResponseStuff = respData.Stuff
 
-	sdk.Logger(ctx).Info().Msg("parsing JS records into SDK records")
+	sdk.Logger(ctx).Info().Msgf("parsing %v JS records into SDK records", len(respData.Records))
 	for _, jsRec := range respData.Records {
 		_ = jsRec
 		s.buffer = append(
@@ -217,7 +217,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		)
 	}
 
-	sdk.Logger(ctx).Info().Msg("all JS records parsed")
+	sdk.Logger(ctx).Info().Msgf("all JS records parsed, buffer size %v", len(s.buffer))
 
 	return nil
 }
