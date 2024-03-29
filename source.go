@@ -110,7 +110,7 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
 	}
 
-	sdk.Logger(ctx).Info().Any("record", rec.Bytes()).Msg("returning record")
+	sdk.Logger(ctx).Info().Any("record", string(rec.Bytes())).Msg("returning record")
 	return rec, nil
 }
 
@@ -205,6 +205,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		s.buffer = append(
 			s.buffer,
 			sdk.Record{
+				Operation: sdk.OperationCreate,
 				Payload: sdk.Change{
 					After: jsRec.Payload.After.(*sdk.RawData),
 				},
