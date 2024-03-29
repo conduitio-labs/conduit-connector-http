@@ -1,7 +1,7 @@
 function getRequestData(cfg, stuff, position) {
     let data = new RequestData()
-    let url = new URL("https://people.googleapis.com/v1/people/me/connections")
-    if (stuff["nextPageToken"] != undefined) {
+    let url = cfg["url"]
+    if (stuff["nextPageToken"] !== undefined) {
         url.searchParams.set("pageToken", stuff["nextPageToken"])
     } else {
         var positionStr = String.fromCharCode.apply(String, position);

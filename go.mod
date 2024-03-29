@@ -17,12 +17,12 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/bufbuild/protocompile v0.9.0 // indirect
 	github.com/conduitio/conduit-connector-protocol v0.5.0 // indirect
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/frankban/quicktest v1.14.6 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20240227163752-401108e1b7e7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -43,7 +43,6 @@ require (
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
-	github.com/stretchr/testify v1.9.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect

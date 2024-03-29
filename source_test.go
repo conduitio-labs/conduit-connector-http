@@ -46,7 +46,7 @@ func TestSource_Read_Connections(t *testing.T) {
 	token := tokenMap["access_token"]
 
 	cfg := map[string]string{
-		"url":                   "https://gmail.googleapis.com/gmail/v1/users/muslim156@gmail.com/messages",
+		"url":                   "https://people.googleapis.com/v1/people/me/connections",
 		"headers":               "Authorization: Bearer " + token,
 		"script.getRequestData": "get_request_data.js",
 		"script.parseResponse":  "parse_response.js",
