@@ -109,6 +109,8 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
 	}
+
+	sdk.Logger(ctx).Info().Any("record", rec.Bytes()).Msg("returning record")
 	return rec, nil
 }
 
