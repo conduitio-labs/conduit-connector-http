@@ -100,6 +100,8 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 }
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
+	sdk.Logger(ctx).Info().Msg("source read called")
+	
 	// TODO: Use ErrBackoffRetry when there's nothing new to process.
 	err := s.limiter.Wait(ctx)
 	if err != nil {
