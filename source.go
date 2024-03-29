@@ -209,8 +209,8 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 				sdk.Metadata{
 					"foo": "bar",
 				},
-				jsRec.Key.(*sdk.RawData),
-				jsRec.Payload.After.(*sdk.RawData),
+				*jsRec.Key.(*sdk.RawData),
+				*jsRec.Payload.After.(*sdk.RawData),
 			),
 		)
 	}
