@@ -130,6 +130,8 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	s.buffer = s.buffer[1:]
 
 	s.lastPosition = rec.Position
+
+	sdk.Logger(ctx).Info().Msg("returning single record")
 	return rec, nil
 }
 
@@ -209,6 +211,8 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 			},
 		)
 	}
+
+	sdk.Logger(ctx).Info().Msg("all JS records parsed")
 
 	return nil
 }
