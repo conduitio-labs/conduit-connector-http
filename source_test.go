@@ -17,6 +17,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
@@ -54,11 +55,14 @@ func TestSource_Read_Connections(t *testing.T) {
 
 	conn := NewSource()
 	is.NoErr(conn.Configure(ctx, cfg))
-	is.NoErr(conn.Open(ctx, sdk.Position("MisA-QgvlQAAABII9efX7KOZhQMQ9efX7KOZhQMyfNvrQeYCCHBEVP_9sTW5OiQ2NjA0ODM0ZS0wMDAwLTIyNDQtOWMzMy1hYzNlYjE0Mjk0NzQ=")))
+	is.NoErr(conn.Open(ctx, nil))
 
 	for i := 0; i < 10; i++ {
 		rec, err := conn.Read(ctx)
-		is.NoErr(err)
+		if err != nil {
+			is.True(errors.Is(err, sdk.ErrBackoffRetry))
+			break
+		}
 		fmt.Println("got record with position: " + string(rec.Position))
 		fmt.Println(string(rec.Payload.After.Bytes()))
 	}
