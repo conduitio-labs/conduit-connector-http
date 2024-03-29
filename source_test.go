@@ -17,10 +17,12 @@ package http
 import (
 	"context"
 	"fmt"
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/matryer/is"
 	"net/http"
 	"testing"
+	"time"
+
+	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/matryer/is"
 )
 
 func TestTeardownSource_NoOpen(t *testing.T) {
@@ -127,9 +129,15 @@ func createServer() (*http.ServeMux, error) {
 		}
 	})
 
+	serverInstance := &http.Server{
+		Addr:         address,
+		Handler:      server,
+		ReadTimeout:  10 * time.Second, // Set your desired read timeout
+		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+	}
 	// Start the HTTP server
 	go func() {
-		err := http.ListenAndServe(address, server)
+		err := serverInstance.ListenAndServe()
 		if err != nil {
 			fmt.Printf("Server error: %s\n", err)
 		}

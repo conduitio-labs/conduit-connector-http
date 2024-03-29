@@ -63,7 +63,7 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	}
 	if s.config.Params != "" && strings.Contains(s.config.Params, "") {
 		if strings.Contains(s.config.URL, "?") {
-			s.config.URL = s.config.URL + s.config.Params
+			s.config.URL += s.config.Params
 		} else {
 			s.config.URL = s.config.URL + "?" + s.config.Params
 		}

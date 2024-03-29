@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
@@ -60,6 +61,7 @@ func TestDestination_Post(t *testing.T) {
 		},
 	}
 	_, err = dest.Write(ctx, []sdk.Record{rec})
+	is.NoErr(err)
 	_, ok := resources["2"]
 	is.True(ok)
 	is.True(resources["2"].Name == "Item 2")
@@ -80,6 +82,7 @@ func TestDestination_Delete(t *testing.T) {
 	is.NoErr(err)
 	rec := sdk.Record{}
 	_, err = dest.Write(ctx, []sdk.Record{rec})
+	is.NoErr(err)
 	_, ok := resources["1"]
 	// resource was deleted
 	is.True(!ok)
@@ -106,8 +109,14 @@ func runServer() {
 	http.HandleFunc("/resource", handleResource)
 	http.HandleFunc("/resource/", handleSingleResource)
 
+	server := &http.Server{
+		Addr:         address,
+		ReadTimeout:  10 * time.Second, // Set your desired read timeout
+		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+	}
+
 	go func() {
-		err := http.ListenAndServe(address, nil)
+		err := server.ListenAndServe()
 		if err != nil {
 			fmt.Printf("Server error: %s\n", err)
 		}
