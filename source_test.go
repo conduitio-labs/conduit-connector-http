@@ -45,27 +45,22 @@ func TestSource_Read_Connections(t *testing.T) {
 
 	token := tokenMap["access_token"]
 
-	getRequestScript, err := os.ReadFile("get_request_data.js")
-	is.NoErr(err)
-
-	parseResponseScript, err := os.ReadFile("parse_response.js")
-	is.NoErr(err)
-
 	cfg := map[string]string{
 		"url":                   "https://gmail.googleapis.com/gmail/v1/users/muslim156@gmail.com/messages",
 		"headers":               "Authorization: Bearer " + token,
-		"script.getRequestData": string(getRequestScript),
-		"script.parseResponse":  string(parseResponseScript),
+		"script.getRequestData": "get_request_data.js",
+		"script.parseResponse":  "parse_response.js",
 	}
 
 	conn := NewSource()
 	is.NoErr(conn.Configure(ctx, cfg))
-	is.NoErr(conn.Open(ctx, sdk.Position("MisA-QgvlQAAABII0vyq5K-XhQMQ0vyq5K-XhQPJ55wmBJDhWn3r0s5QoqQNOiQ2NjA0N2U3MC0wMDAwLTJkYTMtYmU4Ny0wMDFhMTE0ZDM1Yjg=")))
+	is.NoErr(conn.Open(ctx, sdk.Position("MisA-QgvlQAAABII9efX7KOZhQMQ9efX7KOZhQMyfNvrQeYCCHBEVP_9sTW5OiQ2NjA0ODM0ZS0wMDAwLTIyNDQtOWMzMy1hYzNlYjE0Mjk0NzQ=")))
 
 	for i := 0; i < 10; i++ {
 		rec, err := conn.Read(ctx)
 		is.NoErr(err)
 		fmt.Println("got record with position: " + string(rec.Position))
+		fmt.Println(string(rec.Payload.After.Bytes()))
 	}
 
 	is.NoErr(conn.Teardown(ctx))

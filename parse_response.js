@@ -1,5 +1,3 @@
-const userId = 'muslim156@gmail.com'
-
 function connectionToRecord(connection) {
     let rec = new Record()
     rec.Payload.After = new RawData(JSON.stringify(connection))

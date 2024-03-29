@@ -23,6 +23,7 @@ import (
 	"golang.org/x/time/rate"
 	"io"
 	"net/http"
+	"os"
 )
 
 type Source struct {
@@ -58,8 +59,21 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	}
 	s.config = config
 	s.header = header
-	s.jsHelper.getRequestDataSrc = s.config.GetRequestDataScript
-	s.jsHelper.parseResponseSrc = s.config.ParseResponseScript
+
+	getRequestDataSrc, err := os.ReadFile(s.config.GetRequestDataScript)
+	if err != nil {
+		return fmt.Errorf("failed reading %v: %w", s.config.GetRequestDataScript, err)
+	}
+
+	s.jsHelper.getRequestDataSrc = string(getRequestDataSrc)
+
+	parseResponseSrc, err := os.ReadFile(s.config.ParseResponseScript)
+	if err != nil {
+		return fmt.Errorf("failed reading %v: %w", s.config.ParseResponseScript, err)
+	}
+
+	s.jsHelper.parseResponseSrc = string(parseResponseSrc)
+
 	return nil
 }
 
