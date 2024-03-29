@@ -1,0 +1,45 @@
+{
+  "connections": [
+    {
+      "resourceName": "people/c2348170315908543845",
+      "etag": "%EgUBAi43PRoEAQIFByIMU0g1NkdMbkZ1QjA9",
+      "names": [
+        {
+          "metadata": {
+            "primary": true,
+            "source": {
+              "type": "CONTACT",
+              "id": "209660760fd87565"
+            }
+          },
+          "displayName": "Test 3",
+          "givenName": "Test 3",
+          "displayNameLastFirst": "Test 3",
+          "unstructuredName": "Test 3"
+        }
+      ]
+    },
+    {
+      "resourceName": "people/c3645594152534488011",
+      "etag": "%EgUBAi43PRoEAQIFByIMTUYzaTNiWmhJNGc9",
+      "names": [
+        {
+          "metadata": {
+            "primary": true,
+            "source": {
+              "type": "CONTACT",
+              "id": "3297c091090f33cb"
+            }
+          },
+          "displayName": "Test 4",
+          "givenName": "Test 4",
+          "displayNameLastFirst": "Test 4",
+          "unstructuredName": "Test 4"
+        }
+      ]
+    }
+  ],
+  "nextSyncToken": "MisA-QgvlQAAABIIjdTuiLCXhQMQ0vyq5K-XhQPVyU14tt1w8HVTLpTy-78BOiQ2NjA0N2U3MC0wMDAwLTJkYTMtYmU4Ny0wMDFhMTE0ZDM1Yjg=",
+  "totalPeople": 2,
+  "totalItems": 2
+}

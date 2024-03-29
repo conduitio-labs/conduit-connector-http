@@ -5,3 +5,4 @@
 	currently from:  "github.com/conduitio/conduit-connector-protocol/proto/opencdc/v1"
   ```
 * not possible to execute http api requests from within the JS code in goja
+* panic in connector sdk shown only in debug logs
