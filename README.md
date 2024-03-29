@@ -16,7 +16,7 @@ A source connector pulls data from an external resource and pushes it to downstr
 | name            | description                                                                         | required | default value |
 |-----------------|-------------------------------------------------------------------------------------|----------|---------------|
 | `url`           | Http URL to send requests to.                                                       | true     |               |
-| `method`        | Http method to use in the request, supported methods are (`GET`,`HEAD`,`OPTIOMS`).  | false    | `GET`         |
+| `method`        | Http method to use in the request, supported methods are (`GET`,`HEAD`,`OPTIONS`).  | false    | `GET`         |
 | `headers`       | Http headers to use in the request, comma separated list of : separated pairs.      | false    |               |
 | `params`        | parameters to use in the request, & separated list of = separated pairs.            | false    |               |
 | `pollingperiod` | how often the connector will get data from the url, formatted as a `time.Duration`. | false    | "5m"          |
@@ -33,10 +33,3 @@ A destination connector pushes data from upstream resources to an external resou
 | `headers` | Http headers to use in the request, comma separated list of : separated pairs.            | false      |               |
 | `params`  | parameters to use in the request, & separated list of = separated pairs.                  | false      |               |
 
-## Known Issues & Limitations
-* Known issue A
-* Limitation A
-
-## Planned work
-- [ ] Item A
-- [ ] Item B
