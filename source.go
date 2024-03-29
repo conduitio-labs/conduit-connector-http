@@ -206,7 +206,9 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 			s.buffer,
 			sdk.SourceUtil{}.NewRecordCreate(
 				jsRec.Position,
-				nil,
+				sdk.Metadata{
+					"foo": "bar",
+				},
 				jsRec.Key.(*sdk.RawData),
 				jsRec.Payload.After.(*sdk.RawData),
 			),
