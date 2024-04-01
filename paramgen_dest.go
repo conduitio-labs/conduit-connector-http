@@ -25,7 +25,7 @@ func (DestinationConfig) Parameters() map[string]sdk.Parameter {
 		},
 		"params": {
 			Default:     "",
-			Description: "parameters to use in the request, & separated list of = separated pairs",
+			Description: "parameters to use in the request, comma separated list of : separated pairs",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{},
 		},

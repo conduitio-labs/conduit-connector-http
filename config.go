@@ -25,8 +25,21 @@ type Config struct {
 	URL string `json:"url" validate:"required"`
 	// Http headers to use in the request, comma separated list of : separated pairs
 	Headers []string
-	// parameters to use in the request, & separated list of = separated pairs
+	// parameters to use in the request, comma separated list of : separated pairs
 	Params string
+}
+
+func (s Config) addParamsToURL() string {
+	s.Params = strings.ReplaceAll(s.Params, ",", "&")
+	s.Params = strings.ReplaceAll(s.Params, ":", "=")
+	if s.Params != "" {
+		if strings.Contains(s.URL, "?") {
+			s.URL += s.Params
+		} else {
+			s.URL = s.URL + "?" + s.Params
+		}
+	}
+	return s.URL
 }
 
 func (s Config) getHeader() (http.Header, error) {

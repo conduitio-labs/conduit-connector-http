@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
@@ -57,14 +56,8 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
-	if d.config.Params != "" {
-		if strings.Contains(d.config.URL, "?") {
-			d.config.URL += d.config.Params
-		} else {
-			d.config.URL = d.config.URL + "?" + d.config.Params
-		}
-	}
 
+	d.config.URL = d.config.addParamsToURL()
 	d.header, err = config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)

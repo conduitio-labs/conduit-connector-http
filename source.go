@@ -61,13 +61,7 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
-	if s.config.Params != "" && strings.Contains(s.config.Params, "") {
-		if strings.Contains(s.config.URL, "?") {
-			s.config.URL += s.config.Params
-		} else {
-			s.config.URL = s.config.URL + "?" + s.config.Params
-		}
-	}
+	s.config.URL = s.config.addParamsToURL()
 	s.header, err = config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
