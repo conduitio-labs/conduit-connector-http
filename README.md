@@ -3,13 +3,17 @@ The HTTP connector is a [Conduit](https://github.com/ConduitIO/conduit) plugin. 
 and a destination HTTP connectors.
 
 ## How to build?
-Run `make build` to build the connector.
+Run `make build` to build the connector's binary.
 
 ## Testing
 Run `make test` to run all the unit tests. 
 
 ## Source
-A source connector pulls data from an external resource and pushes it to downstream resources via Conduit.
+The HTTP source connector pulls data from the HTTP URL every `pollingPeriod`, the source adds the `params` and `headers`
+to the request, and sends it to the URL with the specified `method` from the `Configuration`. The returned data is
+used to create an openCDC record and return it.
+
+Note: when using the `OPTIONS` method, the resulted options will be added to the record's metadata.
 
 ### Configuration
 
@@ -22,7 +26,12 @@ A source connector pulls data from an external resource and pushes it to downstr
 | `pollingperiod` | how often the connector will get data from the url, formatted as a `time.Duration`. | false    | "5m"          |
 
 ## Destination
-A destination connector pushes data from upstream resources to an external resource via Conduit.
+The HTTP destination connector pushes data from upstream resources to an HTTP URL via Conduit. the destination adds the
+`params` and `headers` to the request, and sends it to the URL with the specified `method` from the `Configuration`. 
+
+Note: The request `Body` that will be sent is the value under `record.Payload.After`, if you want to change the format
+of that or manipulate the field in any way, please check our [Builtin Processors Docs](https://conduit.io/docs/processors/builtin/)
+, or check [Standalone Processors Docs](https://conduit.io/docs/processors/standalone/) if you'd like to build your own processor .
 
 ### Configuration
 
