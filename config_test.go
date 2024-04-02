@@ -32,6 +32,18 @@ func TestConfig_URL(t *testing.T) {
 	is.True(got == want)
 }
 
+func TestConfig_URLParams(t *testing.T) {
+	is := is.New(t)
+	config := Config{
+		// url already has a parameter
+		URL:    "http://localhost:8082/resource?name=resource1",
+		Params: "id:1",
+	}
+	want := "http://localhost:8082/resource?name=resource1&id=1"
+	got := config.addParamsToURL()
+	is.True(got == want)
+}
+
 func TestConfig_Headers(t *testing.T) {
 	is := is.New(t)
 	config := Config{

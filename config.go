@@ -34,7 +34,7 @@ func (s Config) addParamsToURL() string {
 	s.Params = strings.ReplaceAll(s.Params, ":", "=")
 	if s.Params != "" {
 		if strings.Contains(s.URL, "?") {
-			s.URL += s.Params
+			s.URL += "&" + s.Params
 		} else {
 			s.URL = s.URL + "?" + s.Params
 		}
