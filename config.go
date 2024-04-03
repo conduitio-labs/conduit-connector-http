@@ -17,6 +17,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -26,20 +27,29 @@ type Config struct {
 	// Http headers to use in the request, comma separated list of : separated pairs
 	Headers []string
 	// parameters to use in the request, comma separated list of : separated pairs
-	Params string
+	Params []string
 }
 
-func (s Config) addParamsToURL() string {
-	s.Params = strings.ReplaceAll(s.Params, ",", "&")
-	s.Params = strings.ReplaceAll(s.Params, ":", "=")
-	if s.Params != "" {
-		if strings.Contains(s.URL, "?") {
-			s.URL += "&" + s.Params
-		} else {
-			s.URL = s.URL + "?" + s.Params
-		}
+func (s Config) addParamsToURL() (string, error) {
+	parsedURL, err := url.Parse(s.URL)
+	if err != nil {
+		return s.URL, fmt.Errorf("error parsing URL: %w", err)
 	}
-	return s.URL
+	// Parse existing query parameters
+	existingParams := parsedURL.Query()
+	for _, param := range s.Params {
+		keyValue := strings.Split(param, ":")
+		if len(keyValue) != 2 {
+			return s.URL, fmt.Errorf("invalid %q format", "params")
+		}
+		key := keyValue[0]
+		value := keyValue[1]
+		existingParams.Add(key, value)
+	}
+	// Update query parameters in the URL struct
+	parsedURL.RawQuery = existingParams.Encode()
+
+	return parsedURL.String(), nil
 }
 
 func (s Config) getHeader() (http.Header, error) {

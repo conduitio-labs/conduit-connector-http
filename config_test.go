@@ -25,10 +25,10 @@ func TestConfig_URL(t *testing.T) {
 	is := is.New(t)
 	config := Config{
 		URL:    "http://localhost:8082/resource",
-		Params: "name:resource1,id:1",
+		Params: []string{"name:resource1", "id:1"},
 	}
-	want := "http://localhost:8082/resource?name=resource1&id=1"
-	got := config.addParamsToURL()
+	want := "http://localhost:8082/resource?id=1&name=resource1"
+	got, _ := config.addParamsToURL()
 	is.True(got == want)
 }
 
@@ -37,10 +37,23 @@ func TestConfig_URLParams(t *testing.T) {
 	config := Config{
 		// url already has a parameter
 		URL:    "http://localhost:8082/resource?name=resource1",
-		Params: "id:1",
+		Params: []string{"id:1"},
 	}
-	want := "http://localhost:8082/resource?name=resource1&id=1"
-	got := config.addParamsToURL()
+	want := "http://localhost:8082/resource?id=1&name=resource1"
+	got, err := config.addParamsToURL()
+	is.NoErr(err)
+	is.True(got == want)
+}
+
+func TestConfig_EmptyParams(t *testing.T) {
+	is := is.New(t)
+	config := Config{
+		URL:    "http://localhost:8082/resource?",
+		Params: []string{"name:resource1", "id:1"},
+	}
+	want := "http://localhost:8082/resource?id=1&name=resource1"
+	got, err := config.addParamsToURL()
+	is.NoErr(err)
 	is.True(got == want)
 }
 

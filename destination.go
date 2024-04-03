@@ -57,7 +57,10 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 		return fmt.Errorf("invalid config: %w", err)
 	}
 
-	d.config.URL = d.config.addParamsToURL()
+	d.config.URL, err = d.config.addParamsToURL()
+	if err != nil {
+		return err
+	}
 	d.header, err = config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
