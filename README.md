@@ -38,7 +38,7 @@ of that or manipulate the field in any way, please check our [Builtin Processors
 | name      | description                                                                               | required   | default value |
 |-----------|-------------------------------------------------------------------------------------------|------------|---------------|
 | `url`     | Http URL to send requests to.                                                             | true       |               |
-| `method`  | Http method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`). | false      | `GET`         |
+| `method`  | Http method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`). | false      | `POST`         |
 | `headers` | Http headers to use in the request, comma separated list of : separated pairs.            | false      |               |
 | `params`  | parameters to use in the request, comma separated list of : separated pairs.              | false      |               |
 
