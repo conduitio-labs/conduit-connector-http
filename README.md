@@ -21,8 +21,8 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
 |-----------------|-------------------------------------------------------------------------------------|----------|---------------|
 | `url`           | Http URL to send requests to.                                                       | true     |               |
 | `method`        | Http method to use in the request, supported methods are (`GET`,`HEAD`,`OPTIONS`).  | false    | `GET`         |
-| `headers`       | Http headers to use in the request, comma separated list of : separated pairs.      | false    |               |
-| `params`        | parameters to use in the request, comma separated list of : separated pairs.        | false    |               |
+| `headers`       | Http headers to use in the request, comma separated list of `:` separated pairs.    | false    |               |
+| `params`        | parameters to use in the request, comma separated list of `:` separated pairs.      | false    |               |
 | `pollingperiod` | how often the connector will get data from the url, formatted as a `time.Duration`. | false    | "5m"          |
 
 ## Destination
@@ -38,7 +38,7 @@ of that or manipulate the field in any way, please check our [Builtin Processors
 | name      | description                                                                               | required   | default value |
 |-----------|-------------------------------------------------------------------------------------------|------------|---------------|
 | `url`     | Http URL to send requests to.                                                             | true       |               |
-| `method`  | Http method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`). | false      | `POST`         |
+| `method`  | Http method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`). | false      | `POST`        |
 | `headers` | Http headers to use in the request, comma separated list of : separated pairs.            | false      |               |
 | `params`  | parameters to use in the request, comma separated list of : separated pairs.              | false      |               |
 
