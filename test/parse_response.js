@@ -15,7 +15,7 @@ function parseResponse(bytes) {
         }
     }
 
-    var resp = new ResponseData()
+    var resp = new Response()
     resp.CustomData["nextPageToken"] = data["nextPageToken"]
     resp.Records = records
 

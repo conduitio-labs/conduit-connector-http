@@ -172,8 +172,8 @@ func (s *sourceExtension) newRuntime(logger *zerolog.Logger) (*goja.Runtime, err
 		"Record":         s.newJSRecord(rt),
 		"RawData":        s.jsContentRaw(rt),
 		"StructuredData": s.jsContentStructured(rt),
-		"RequestData":    s.newRequestData(rt),
-		"ResponseData":   s.newResponseData(rt),
+		"Request":        s.newRequestData(rt),
+		"Response":       s.newResponseData(rt),
 	}
 
 	for name, helper := range runtimeHelpers {
