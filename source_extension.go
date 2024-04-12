@@ -42,18 +42,18 @@ type response struct {
 }
 
 type jsPayload struct {
-	Before any
-	After  any
+	Before sdk.Data
+	After  sdk.Data
 }
 
-// jsRecord is an intermediary representation of opencdc.Record that is passed to
-// the JavaScript transform. We use this because using opencdc.Record would not
+// jsRecord is an intermediary representation of sdk.Record that is passed to
+// the JavaScript transform. We use this because using sdk.Record would not
 // allow us to modify or access certain data (e.g. metadata or structured data).
 type jsRecord struct {
 	Position  []byte
 	Operation string
 	Metadata  map[string]string
-	Key       any
+	Key       sdk.Data
 	Payload   jsPayload
 }
 
@@ -97,10 +97,6 @@ func (s *sourceExtension) open(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed initializing JS runtime: %w", err)
 	}
-
-	require.
-		NewRegistry(require.WithGlobalFolders("/home/haris/node_modules")).
-		Enable(runtime)
 
 	_, err = s.newFunction(runtime, s.getRequestDataSrc, getRequestDataFn)
 	if err != nil {
