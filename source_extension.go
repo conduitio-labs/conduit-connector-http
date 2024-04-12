@@ -169,9 +169,9 @@ func (s *sourceExtension) newRuntime(logger *zerolog.Logger) (*goja.Runtime, err
 
 	runtimeHelpers := map[string]interface{}{
 		"logger":         &logger,
-		"Record":         s.newJSRecord(rt),
-		"RawData":        s.jsContentRaw(rt),
-		"StructuredData": s.jsContentStructured(rt),
+		"Record":         s.newRecord(rt),
+		"RawData":        s.newRawData(rt),
+		"StructuredData": s.newStructuredData(rt),
 		"Request":        s.newRequestData(rt),
 		"Response":       s.newResponseData(rt),
 	}
@@ -185,7 +185,7 @@ func (s *sourceExtension) newRuntime(logger *zerolog.Logger) (*goja.Runtime, err
 	return rt, nil
 }
 
-func (s *sourceExtension) jsContentRaw(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+func (s *sourceExtension) newRawData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
 		var r sdk.RawData
 		if len(call.Arguments) > 0 {
@@ -196,7 +196,7 @@ func (s *sourceExtension) jsContentRaw(runtime *goja.Runtime) func(goja.Construc
 	}
 }
 
-func (s *sourceExtension) jsContentStructured(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+func (s *sourceExtension) newStructuredData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
 		// TODO accept arguments
 		// We return a map[string]interface{} struct, however because we are
@@ -207,7 +207,7 @@ func (s *sourceExtension) jsContentStructured(runtime *goja.Runtime) func(goja.C
 	}
 }
 
-func (s *sourceExtension) newJSRecord(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
+func (s *sourceExtension) newRecord(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
 		// We return a singleRecord struct, however because we are
 		// not changing call.This instanceof will not work as expected.
