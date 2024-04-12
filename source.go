@@ -31,10 +31,11 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config  SourceConfig
-	client  *http.Client
-	limiter *rate.Limiter
-	header  http.Header
+	config    SourceConfig
+	client    *http.Client
+	limiter   *rate.Limiter
+	header    http.Header
+	extension *sourceExtension
 }
 
 type SourceConfig struct {
@@ -43,10 +44,17 @@ type SourceConfig struct {
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
 	// Http method to use in the request
 	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
+
+	// The path to a .js file containing the code to prepare the request data.
+	GetRequestDataScript string `json:"script.getRequestData"`
+	// The path to a .js file containing the code to parse the response.
+	ParseResponseScript string `json:"script.parseResponse"`
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(&Source{})
+	return sdk.SourceWithMiddleware(
+		&Source{extension: newSourceExtension()},
+	)
 }
 
 func (s *Source) Parameters() map[string]sdk.Parameter {
@@ -68,6 +76,11 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	s.header, err = config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
+	}
+
+	err = s.extension.configure(config.GetRequestDataScript, config.ParseResponseScript)
+	if err != nil {
+		return fmt.Errorf("failed configuring JS extension: %w", err)
 	}
 	s.config = config
 
