@@ -1,5 +1,5 @@
 function parseResponse(bytes) {
-    // logger.Info().Msg("[parseResponse] start")
+    logger.Info("[parseResponse] start")
 
     var str = String.fromCharCode.apply(String, bytes);
     var data = JSON.parse(str);
