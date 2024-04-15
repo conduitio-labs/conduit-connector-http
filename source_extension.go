@@ -42,11 +42,6 @@ type Response struct {
 	Records    []*jsRecord
 }
 
-type jsPayload struct {
-	Before sdk.Data
-	After  sdk.Data
-}
-
 // jsRecord is an intermediary representation of sdk.Record that is passed to
 // the JavaScript transform. We use this because using sdk.Record would not
 // allow us to modify or access certain data (e.g. metadata or structured data).
@@ -54,8 +49,13 @@ type jsRecord struct {
 	Position  []byte
 	Operation string
 	Metadata  map[string]string
-	Key       sdk.Data
-	Payload   *jsPayload
+	Key       any
+	Payload   jsPayload
+}
+
+type jsPayload struct {
+	Before any
+	After  any
 }
 
 // gojaContext represents one independent goja context.
@@ -221,8 +221,8 @@ func (s *sourceExtension) newStructuredData(runtime *goja.Runtime) func(goja.Con
 		// We return a map[string]interface{} struct, however because we are
 		// not changing call.This instanceof will not work as expected.
 
-		r := sdk.StructuredData{}
-		return runtime.ToValue(&r).ToObject(runtime)
+		r := make(map[string]interface{})
+		return runtime.ToValue(r).ToObject(runtime)
 	}
 }
 
@@ -236,7 +236,6 @@ func (s *sourceExtension) newRecord(runtime *goja.Runtime) func(goja.Constructor
 		// (without worrying about initializing it every time)
 		r := jsRecord{
 			Metadata: make(map[string]string),
-			Payload:  &jsPayload{},
 		}
 		// We need to return a pointer to make the returned object mutable.
 		return runtime.ToValue(&r).ToObject(runtime)

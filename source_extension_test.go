@@ -16,12 +16,12 @@ package http
 
 import (
 	"context"
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/google/go-cmp/cmp"
-	"github.com/rs/zerolog"
 	"testing"
 
+	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/google/go-cmp/cmp"
 	"github.com/matryer/is"
+	"github.com/rs/zerolog"
 )
 
 func TestSourceExtension_GetRequestData(t *testing.T) {
@@ -72,6 +72,11 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 		{
 			"id": "id-a",
 			"field_a": "value_a"
+		},
+		{
+			"id": "id-b",
+			"field_b": "value_b",
+			"field_c": "value_c"
 		}
 	]
 }`))
@@ -84,8 +89,19 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 				Position: []byte("xyz"),
 				Key:      sdk.RawData("id-a"),
 				Metadata: make(map[string]string),
-				Payload: &jsPayload{
-					After: sdk.RawData(`{"field_a":"value_a"}`),
+				Payload: jsPayload{
+					After: map[string]any{"field_a": "value_a"},
+				},
+			},
+			{
+				Position: []byte("xyz"),
+				Key:      sdk.RawData("id-b"),
+				Metadata: make(map[string]string),
+				Payload: jsPayload{
+					After: map[string]any{
+						"field_b": "value_b",
+						"field_c": "value_c",
+					},
 				},
 			},
 		},

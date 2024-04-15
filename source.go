@@ -168,49 +168,6 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	return rec, nil
 }
 
-func (s *Source) getRecordOld(ctx context.Context) (sdk.Record, error) {
-	// create GET request
-	req, err := http.NewRequestWithContext(ctx, s.config.Method, s.config.URL, nil)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error creating HTTP request: %w", err)
-	}
-	req.Header = s.header
-	// get response
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error getting data from URL: %w", err)
-	}
-	defer resp.Body.Close()
-	// check response status
-	if resp.StatusCode != http.StatusOK {
-		return sdk.Record{}, fmt.Errorf("response status should be %v, got status=%v", http.StatusOK, resp.StatusCode)
-	}
-	// read body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error reading body for response %v: %w", resp, err)
-	}
-	// add response header to metadata
-	meta := sdk.Metadata{}
-	for key, val := range resp.Header {
-		meta[key] = strings.Join(val, ",")
-	}
-
-	// create record
-	now := time.Now().Unix()
-	rec := sdk.Record{
-		Payload: sdk.Change{
-			Before: nil,
-			After:  sdk.RawData(body),
-		},
-		Metadata:  meta,
-		Operation: sdk.OperationCreate,
-		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
-	}
-	return rec, nil
-}
-
 func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
 	sdk.Logger(ctx).Debug().Str("position", string(position)).Msg("got ack")
 	return nil
@@ -291,10 +248,20 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 		meta[key] = strings.Join(val, ",")
 	}
 
+	convertData := func(d interface{}) sdk.Data {
+		switch v := d.(type) {
+		case *sdk.RawData:
+			return *v
+		case map[string]interface{}:
+			return sdk.StructuredData(v)
+		}
+		return nil
+	}
+
 	return sdk.SourceUtil{}.NewRecordCreate(
 		jsRec.Position,
 		meta,
-		*jsRec.Key.(*sdk.RawData),
-		*jsRec.Payload.After.(*sdk.RawData),
+		convertData(jsRec.Key),
+		convertData(jsRec.Payload.After),
 	)
 }

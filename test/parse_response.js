@@ -2,7 +2,13 @@ function convertToRecord(obj, nextSyncToken) {
     let rec = new Record()
     rec.Position = nextSyncToken
     rec.Payload.After = new StructuredData()
-    rec.Payload.After["foo"] = "bar"
+    Object.keys(obj).forEach(key => {
+        if (key == "id") {
+            rec.Key = new RawData(obj[key])
+        } else {
+            rec.Payload.After[key] = obj[key]
+        }
+    })
 
     return rec
 }
