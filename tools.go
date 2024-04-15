@@ -14,7 +14,7 @@
 
 //go:build tools
 
-package main
+package http
 
 import (
 	_ "github.com/conduitio/conduit-connector-sdk/cmd/paramgen"
