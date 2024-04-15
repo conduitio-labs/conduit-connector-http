@@ -126,6 +126,11 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
 
+	err = s.extension.open(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to open extension: %w", err)
+	}
+	
 	return nil
 }
 
