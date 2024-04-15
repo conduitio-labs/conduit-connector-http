@@ -31,7 +31,7 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 	underTest := newSourceExtension()
 	err := underTest.configure(
 		"./test/get_request_data.js",
-		"./test/parse_response.js",
+		"",
 	)
 	is.NoErr(err)
 
@@ -58,7 +58,7 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 
 	underTest := newSourceExtension()
 	err := underTest.configure(
-		"./test/get_request_data.js",
+		"",
 		"./test/parse_response.js",
 	)
 	is.NoErr(err)
@@ -70,10 +70,8 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 	"nextSyncToken": "xyz",
 	"some_objects": [
 		{
+			"id": "id-a",
 			"field_a": "value_a"
-		},
-		{
-			"field_b": "value_b"
 		}
 	]
 }`))
@@ -84,16 +82,10 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 		[]*jsRecord{
 			{
 				Position: []byte("xyz"),
+				Key:      sdk.RawData("id-a"),
 				Metadata: make(map[string]string),
-				Payload: jsPayload{
+				Payload: &jsPayload{
 					After: sdk.RawData(`{"field_a":"value_a"}`),
-				},
-			},
-			{
-				Position: []byte("xyz"),
-				Metadata: make(map[string]string),
-				Payload: jsPayload{
-					After: sdk.RawData(`{"field_b":"value_b"}`),
 				},
 			},
 		},

@@ -1,3 +1,12 @@
+function convertToRecord(obj, nextSyncToken) {
+    let rec = new Record()
+    rec.Position = nextSyncToken
+    rec.Payload.After = new StructuredData()
+    rec.Payload.After["foo"] = "bar"
+
+    return rec
+}
+
 function parseResponse(bytes) {
     logger.Info("[parseResponse] start")
 
@@ -8,10 +17,7 @@ function parseResponse(bytes) {
 
     if (data.some_objects != undefined) {
         for (const obj of data.some_objects) {
-            let rec = new Record()
-            rec.Position = data.nextSyncToken
-            rec.Payload.After = new StructuredData()
-            records.push(rec);
+            records.push(convertToRecord(obj, data.nextSyncToken));
         }
     }
 

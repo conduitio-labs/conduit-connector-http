@@ -16,6 +16,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -54,7 +55,7 @@ type jsRecord struct {
 	Operation string
 	Metadata  map[string]string
 	Key       sdk.Data
-	Payload   jsPayload
+	Payload   *jsPayload
 }
 
 // gojaContext represents one independent goja context.
@@ -78,17 +79,21 @@ func newSourceExtension() *sourceExtension {
 }
 
 func (s *sourceExtension) configure(getRequestDataScript, parseResponseScript string) error {
-	getRequestDataSrc, err := os.ReadFile(getRequestDataScript)
-	if err != nil {
-		return fmt.Errorf("failed reading %v from %v: %w", getRequestDataFn, getRequestDataScript, err)
+	if getRequestDataScript != "" {
+		getRequestDataSrc, err := os.ReadFile(getRequestDataScript)
+		if err != nil {
+			return fmt.Errorf("failed reading %v from %v: %w", getRequestDataFn, getRequestDataScript, err)
+		}
+		s.getRequestDataSrc = string(getRequestDataSrc)
 	}
-	s.getRequestDataSrc = string(getRequestDataSrc)
 
-	parseResponseSrc, err := os.ReadFile(parseResponseScript)
-	if err != nil {
-		return fmt.Errorf("failed reading %v from %v: %w", parseResponseFn, parseResponseScript, err)
+	if parseResponseScript != "" {
+		parseResponseSrc, err := os.ReadFile(parseResponseScript)
+		if err != nil {
+			return fmt.Errorf("failed reading %v from %v: %w", parseResponseFn, parseResponseScript, err)
+		}
+		s.parseResponseSrc = string(parseResponseSrc)
 	}
-	s.parseResponseSrc = string(parseResponseSrc)
 
 	return nil
 }
@@ -125,9 +130,17 @@ func (s *sourceExtension) open(ctx context.Context) error {
 	return nil
 }
 
-func (s *sourceExtension) getRequestData(cfg SourceConfig, previousResponseData map[string]any, position sdk.Position) (*Request, error) {
+func (s *sourceExtension) getRequestData(
+	cfg SourceConfig,
+	previousResponseData map[string]any,
+	position sdk.Position,
+) (*Request, error) {
 	gojaCtx := s.gojaPool.Get().(*gojaContext)
 	defer s.gojaPool.Put(gojaCtx)
+
+	if gojaCtx.getRequestDataFn == nil {
+		return nil, errors.New("getRequestData function has not been initialized")
+	}
 
 	fn, err := gojaCtx.getRequestDataFn(
 		goja.Undefined(),
@@ -150,6 +163,10 @@ func (s *sourceExtension) getRequestData(cfg SourceConfig, previousResponseData 
 func (s *sourceExtension) parseResponseData(responseBytes []byte) (*Response, error) {
 	gojaCtx := s.gojaPool.Get().(*gojaContext)
 	defer s.gojaPool.Put(gojaCtx)
+
+	if gojaCtx.parseResponseFn == nil {
+		return nil, errors.New("parseResponse function has not been initialized")
+	}
 
 	fn, err := gojaCtx.parseResponseFn(goja.Undefined(), gojaCtx.runtime.ToValue(responseBytes))
 	if err != nil {
@@ -204,8 +221,8 @@ func (s *sourceExtension) newStructuredData(runtime *goja.Runtime) func(goja.Con
 		// We return a map[string]interface{} struct, however because we are
 		// not changing call.This instanceof will not work as expected.
 
-		r := make(map[string]interface{})
-		return runtime.ToValue(r).ToObject(runtime)
+		r := sdk.StructuredData{}
+		return runtime.ToValue(&r).ToObject(runtime)
 	}
 }
 
@@ -219,6 +236,7 @@ func (s *sourceExtension) newRecord(runtime *goja.Runtime) func(goja.Constructor
 		// (without worrying about initializing it every time)
 		r := jsRecord{
 			Metadata: make(map[string]string),
+			Payload:  &jsPayload{},
 		}
 		// We need to return a pointer to make the returned object mutable.
 		return runtime.ToValue(&r).ToObject(runtime)
@@ -226,6 +244,10 @@ func (s *sourceExtension) newRecord(runtime *goja.Runtime) func(goja.Constructor
 }
 
 func (s *sourceExtension) newFunction(runtime *goja.Runtime, src string, fnName string) (goja.Callable, error) {
+	if src == "" {
+		return nil, nil
+	}
+
 	prg, err := goja.Compile("", src, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile script: %w", err)
