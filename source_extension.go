@@ -99,7 +99,7 @@ func (s *sourceExtension) configure(getRequestDataScript, parseResponseScript st
 }
 
 func (s *sourceExtension) open(ctx context.Context) error {
-	// check if the runtime and functions can be initialized
+	sdk.Logger(ctx).Debug().Msg("check if the runtime and functions can be initialized")
 	runtime, err := s.newRuntime(sdk.Logger(ctx))
 	if err != nil {
 		return fmt.Errorf("failed initializing JS runtime: %w", err)
@@ -114,6 +114,8 @@ func (s *sourceExtension) open(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed initializing function %q: %w", parseResponseFn, err)
 	}
+
+	sdk.Logger(ctx).Debug().Msg("runtime and functions check: OK")
 
 	s.gojaPool.New = func() any {
 		// create a new runtime for the function, so it's executed in a separate goja context
