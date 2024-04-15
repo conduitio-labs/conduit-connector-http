@@ -18,6 +18,7 @@ import (
 	"context"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/google/go-cmp/cmp"
+	"github.com/rs/zerolog"
 	"testing"
 
 	"github.com/matryer/is"
@@ -52,7 +53,8 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 
 func TestSourceExtension_ParseResponse(t *testing.T) {
 	is := is.New(t)
-	ctx := context.Background()
+	logger := zerolog.New(zerolog.NewTestWriter(t))
+	ctx := logger.WithContext(context.Background())
 
 	underTest := newSourceExtension()
 	err := underTest.configure(

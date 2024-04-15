@@ -31,11 +31,15 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config    SourceConfig
-	client    *http.Client
-	limiter   *rate.Limiter
-	header    http.Header
-	extension *sourceExtension
+	config  SourceConfig
+	client  *http.Client
+	limiter *rate.Limiter
+	header  http.Header
+
+	extension         *sourceExtension
+	lastResponseStuff map[string]any
+	buffer            []sdk.Record
+	lastPosition      sdk.Position
 }
 
 type SourceConfig struct {
@@ -46,8 +50,18 @@ type SourceConfig struct {
 	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 
 	// The path to a .js file containing the code to prepare the request data.
+	// The signature of the function needs to be:
+	// `function getRequestData(cfg, previousResponse, position)` where:
+	// * `cfg` (a map) is the connector configuration
+	// * `previousResponse` (a map) contains data from the previous response (if any), returned by `parseResponse`
+	// * `position` (a byte array) contains the starting position of the connector.
+	// The function needs to return a Request object.
 	GetRequestDataScript string `json:"script.getRequestData"`
 	// The path to a .js file containing the code to parse the response.
+	// The signature of the function needs to be:
+	// `function parseResponse(bytes)` where
+	// `bytes` are the original response's raw bytes (i.e. unparsed).
+	// The response should be a Response object.
 	ParseResponseScript string `json:"script.parseResponse"`
 }
 
@@ -127,6 +141,34 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 }
 
 func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
+	// input: config, lastPosition
+	// output: request = URL + Headers
+	if len(s.buffer) == 0 {
+		err := s.limiter.Wait(ctx)
+		if err != nil {
+			return sdk.Record{}, err
+		}
+
+		err = s.fillBuffer(ctx)
+		if err != nil {
+			return sdk.Record{}, err
+		}
+	}
+
+	if len(s.buffer) == 0 {
+		return sdk.Record{}, sdk.ErrBackoffRetry
+	}
+
+	rec := s.buffer[0]
+	s.buffer = s.buffer[1:]
+
+	s.lastPosition = rec.Position
+
+	sdk.Logger(ctx).Info().Msg("returning single record")
+	return rec, nil
+}
+
+func (s *Source) getRecordOld(ctx context.Context) (sdk.Record, error) {
 	// create GET request
 	req, err := http.NewRequestWithContext(ctx, s.config.Method, s.config.URL, nil)
 	if err != nil {
@@ -179,4 +221,80 @@ func (s *Source) Teardown(context.Context) error {
 		s.client.CloseIdleConnections()
 	}
 	return nil
+}
+
+func (s *Source) fillBuffer(ctx context.Context) error {
+	sdk.Logger(ctx).Info().Msg("filling buffer")
+	// create request
+	reqData, err := s.extension.getRequestData(s.config, s.lastResponseStuff, s.lastPosition)
+	if err != nil {
+		return err
+	}
+
+	sdk.Logger(ctx).Info().Msg("request URL: " + reqData.URL)
+	req, err := http.NewRequestWithContext(ctx, s.config.Method, reqData.URL, nil)
+	if err != nil {
+		return fmt.Errorf("error creating HTTP request: %w", err)
+	}
+	req.Header = s.header
+
+	// get response
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error getting data from URL: %w", err)
+	}
+	defer resp.Body.Close()
+	// check response status
+	if resp.StatusCode != http.StatusOK {
+		errorMsg := "unknown"
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			errorMsg = string(body)
+		}
+
+		return fmt.Errorf(
+			"response status should be %v, got status=%v, cause=%v",
+			http.StatusOK,
+			resp.StatusCode,
+			errorMsg,
+		)
+	}
+
+	// read body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading body for response %v: %w", resp, err)
+	}
+
+	respData, err := s.extension.parseResponseData(body)
+	if err != nil {
+		return err
+	}
+
+	sdk.Logger(ctx).Info().Msgf("parsing %v JS records into SDK records", len(respData.Records))
+	for _, jsRec := range respData.Records {
+		_ = jsRec
+		s.buffer = append(
+			s.buffer,
+			s.toSDKRecord(jsRec, resp),
+		)
+	}
+
+	s.lastResponseStuff = respData.CustomData
+
+	return nil
+}
+
+func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
+	meta := sdk.Metadata{}
+	for key, val := range resp.Header {
+		meta[key] = strings.Join(val, ",")
+	}
+
+	return sdk.SourceUtil{}.NewRecordCreate(
+		jsRec.Position,
+		meta,
+		*jsRec.Key.(*sdk.RawData),
+		*jsRec.Payload.After.(*sdk.RawData),
+	)
 }

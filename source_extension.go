@@ -32,11 +32,11 @@ var (
 	parseResponseFn  = "parseResponse"
 )
 
-type request struct {
+type Request struct {
 	URL string
 }
 
-type response struct {
+type Response struct {
 	CustomData map[string]any
 	Records    []*jsRecord
 }
@@ -65,8 +65,10 @@ type gojaContext struct {
 }
 
 type sourceExtension struct {
+	// getRequestDataSrc contains the source code of the `getRequestData` function
 	getRequestDataSrc string
-	parseResponseSrc  string
+	// parseResponseSrc contains the source code of the `parseResponse` function
+	parseResponseSrc string
 
 	gojaPool sync.Pool
 }
@@ -123,7 +125,7 @@ func (s *sourceExtension) open(ctx context.Context) error {
 	return nil
 }
 
-func (s *sourceExtension) getRequestData(cfg SourceConfig, previousResponseData map[string]any, position sdk.Position) (*request, error) {
+func (s *sourceExtension) getRequestData(cfg SourceConfig, previousResponseData map[string]any, position sdk.Position) (*Request, error) {
 	gojaCtx := s.gojaPool.Get().(*gojaContext)
 	defer s.gojaPool.Put(gojaCtx)
 
@@ -137,15 +139,15 @@ func (s *sourceExtension) getRequestData(cfg SourceConfig, previousResponseData 
 		return nil, err
 	}
 
-	rd, ok := fn.Export().(*request)
+	rd, ok := fn.Export().(*Request)
 	if !ok {
-		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &request{}, fn)
+		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Request{}, fn)
 	}
 
 	return rd, nil
 }
 
-func (s *sourceExtension) parseResponseData(responseBytes []byte) (*response, error) {
+func (s *sourceExtension) parseResponseData(responseBytes []byte) (*Response, error) {
 	gojaCtx := s.gojaPool.Get().(*gojaContext)
 	defer s.gojaPool.Put(gojaCtx)
 
@@ -154,9 +156,9 @@ func (s *sourceExtension) parseResponseData(responseBytes []byte) (*response, er
 		return nil, err
 	}
 
-	rd, ok := fn.Export().(*response)
+	rd, ok := fn.Export().(*Response)
 	if !ok {
-		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &response{}, fn)
+		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Response{}, fn)
 	}
 
 	return rd, nil
@@ -245,7 +247,7 @@ func (s *sourceExtension) newFunction(runtime *goja.Runtime, src string, fnName 
 
 func (s *sourceExtension) newRequestData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
-		r := request{}
+		r := Request{}
 		// We need to return a pointer to make the returned object mutable.
 		return runtime.ToValue(&r).ToObject(runtime)
 	}
@@ -253,7 +255,7 @@ func (s *sourceExtension) newRequestData(runtime *goja.Runtime) func(goja.Constr
 
 func (s *sourceExtension) newResponseData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
-		r := response{
+		r := Response{
 			CustomData: map[string]any{},
 		}
 		// We need to return a pointer to make the returned object mutable.
