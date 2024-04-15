@@ -76,7 +76,7 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 }
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
-	sdk.Logger(ctx).Info().Msg("Configuring Source...")
+	sdk.Logger(ctx).Info().Msg("configuring source...")
 
 	var config SourceConfig
 	err := sdk.Util.ParseConfig(cfg, &config)
@@ -102,6 +102,7 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 }
 
 func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
+	sdk.Logger(ctx).Info().Msg("opening source")
 	// create client
 	s.client = &http.Client{}
 
@@ -159,12 +160,12 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, sdk.ErrBackoffRetry
 	}
 
+	sdk.Logger(ctx).Trace().Msg("returning record")
+
 	rec := s.buffer[0]
 	s.buffer = s.buffer[1:]
-
 	s.lastPosition = rec.Position
 
-	sdk.Logger(ctx).Info().Msg("returning single record")
 	return rec, nil
 }
 
@@ -181,7 +182,7 @@ func (s *Source) Teardown(context.Context) error {
 }
 
 func (s *Source) fillBuffer(ctx context.Context) error {
-	sdk.Logger(ctx).Info().Msg("filling buffer")
+	sdk.Logger(ctx).Debug().Msg("filling buffer")
 	// create request
 	reqData, err := s.extension.getRequestData(s.config, s.lastResponseStuff, s.lastPosition)
 	if err != nil {
