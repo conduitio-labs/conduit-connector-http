@@ -31,15 +31,18 @@ import (
 type Source struct {
 	sdk.UnimplementedSource
 
-	config  SourceConfig
+	config SourceConfig
+	header http.Header
+
 	client  *http.Client
 	limiter *rate.Limiter
-	header  http.Header
 
-	extension        *sourceExtension
 	lastResponseData map[string]any
 	buffer           []sdk.Record
 	lastPosition     sdk.Position
+
+	requestDataFn  *requestDataFn
+	responseParser *responseParser
 }
 
 type SourceConfig struct {
@@ -66,9 +69,7 @@ type SourceConfig struct {
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(
-		&Source{extension: newSourceExtension()},
-	)
+	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware()...)
 }
 
 func (s *Source) Parameters() map[string]sdk.Parameter {
@@ -83,19 +84,27 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
+
 	s.config.URL, err = s.config.addParamsToURL()
 	if err != nil {
 		return err
 	}
+
 	s.header, err = config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
 	}
 
-	err = s.extension.configure(config.GetRequestDataScript, config.ParseResponseScript)
+	s.requestDataFn, err = newRequestDataFn(ctx, s.config.GetRequestDataScript)
 	if err != nil {
-		return fmt.Errorf("failed configuring JS extension: %w", err)
+		return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 	}
+
+	s.responseParser, err = newResponseParser(ctx, s.config.ParseResponseScript)
+	if err != nil {
+		return fmt.Errorf("failed initializing %v: %w", parseResponseFn, err)
+	}
+
 	s.config = config
 
 	return nil
@@ -113,11 +122,6 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
-
-	err = s.extension.open(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to open extension: %w", err)
-	}
 
 	return nil
 }
@@ -188,6 +192,7 @@ func (s *Source) Teardown(context.Context) error {
 	if s.client != nil {
 		s.client.CloseIdleConnections()
 	}
+
 	return nil
 }
 
@@ -199,7 +204,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		return err
 	}
 
-	sdk.Logger(ctx).Info().Msg("request URL: " + reqData.URL)
+	sdk.Logger(ctx).Debug().Msg("request URL: " + reqData.URL)
 	req, err := http.NewRequestWithContext(ctx, s.config.Method, reqData.URL, nil)
 	if err != nil {
 		return fmt.Errorf("error creating HTTP request: %w", err)
@@ -215,18 +220,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 
 	// check response status
 	if resp.StatusCode != http.StatusOK {
-		errorMsg := "unknown"
-		body, err := io.ReadAll(resp.Body)
-		if err == nil {
-			errorMsg = string(body)
-		}
-
-		return fmt.Errorf(
-			"expected response status %v, but got status=%v, cause=%v",
-			http.StatusOK,
-			resp.StatusCode,
-			errorMsg,
-		)
+		return s.buildError(resp)
 	}
 
 	err = s.parseResponse(ctx, resp)
@@ -237,12 +231,26 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 	return nil
 }
 
+func (s *Source) buildError(resp *http.Response) error {
+	errorMsg := "unknown"
+	body, err := io.ReadAll(resp.Body)
+	if err == nil {
+		errorMsg = string(body)
+	}
+
+	return fmt.Errorf(
+		"expected response status 200, but got status=%v, cause=%v",
+		resp.StatusCode,
+		errorMsg,
+	)
+}
+
 func (s *Source) getRequestData() (*Request, error) {
-	if !s.extension.hasGetRequestData {
+	if s.requestDataFn == nil {
 		return &Request{URL: s.config.URL}, nil
 	}
 
-	return s.extension.getRequestData(s.config, s.lastResponseData, s.lastPosition)
+	return s.requestDataFn.call(s.config, s.lastResponseData, s.lastPosition)
 }
 
 func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
@@ -254,25 +262,26 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 		return fmt.Errorf("error reading body for response %v: %w", resp, err)
 	}
 
-	if !s.extension.hasParseResponseData {
+	// no custom parsing, the whole response is transformed into a record
+	if s.responseParser == nil {
 		s.parseAsSingleRecord(resp, body)
 		return nil
 	}
 
-	respData, err := s.extension.parseResponseData(body)
+	respData, err := s.responseParser.call(body)
 	if err != nil {
 		return err
 	}
 
-	sdk.Logger(ctx).Info().Msgf("parsing %v JS records into SDK records", len(respData.Records))
+	sdk.Logger(ctx).Debug().Msgf("parsing %v JS records into SDK records", len(respData.Records))
 	for _, jsRec := range respData.Records {
-		_ = jsRec
 		s.buffer = append(
 			s.buffer,
 			s.toSDKRecord(jsRec, resp),
 		)
 	}
 	s.lastResponseData = respData.CustomData
+
 	return nil
 }
 
