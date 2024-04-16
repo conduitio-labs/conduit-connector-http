@@ -107,6 +107,22 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	s.client = &http.Client{}
 
 	// check connection
+	err := s.testConnection(ctx)
+	if err != nil {
+		return fmt.Errorf("failed connection test: %w", err)
+	}
+
+	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
+
+	err = s.extension.open(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to open extension: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Source) testConnection(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, s.config.URL, nil)
 	if err != nil {
 		return fmt.Errorf("error creating HTTP request %q: %w", s.config.URL, err)
@@ -117,18 +133,13 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusUnauthorized {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("failed to read response body: %w", err)
 		}
 		return fmt.Errorf("authorization failed, %s: %s", http.StatusText(http.StatusUnauthorized), string(body))
-	}
-	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
-
-	err = s.extension.open(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to open extension: %w", err)
 	}
 
 	return nil
@@ -205,6 +216,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		return fmt.Errorf("error getting data from URL: %w", err)
 	}
 	defer resp.Body.Close()
+
 	// check response status
 	if resp.StatusCode != http.StatusOK {
 		errorMsg := "unknown"
@@ -214,12 +226,31 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		}
 
 		return fmt.Errorf(
-			"response status should be %v, got status=%v, cause=%v",
+			"expected response status %v, but got status=%v, cause=%v",
 			http.StatusOK,
 			resp.StatusCode,
 			errorMsg,
 		)
 	}
+
+	err = s.parseResponse(ctx, resp)
+	if err != nil {
+		return fmt.Errorf("failed parsing response: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Source) getRequestData() (*Request, error) {
+	if !s.extension.hasGetRequestData {
+		return &Request{URL: s.config.URL}, nil
+	}
+
+	return s.extension.getRequestData(s.config, s.lastResponseData, s.lastPosition)
+}
+
+func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
+	sdk.Logger(ctx).Debug().Msg("parsing response")
 
 	// read body
 	body, err := io.ReadAll(resp.Body)
@@ -228,25 +259,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 	}
 
 	if !s.extension.hasParseResponseData {
-		meta := sdk.Metadata{}
-		for key, val := range resp.Header {
-			meta[key] = strings.Join(val, ",")
-		}
-
-		// create record
-		now := time.Now().Unix()
-		s.buffer = []sdk.Record{
-			{
-				Payload: sdk.Change{
-					Before: nil,
-					After:  sdk.RawData(body),
-				},
-				Metadata:  meta,
-				Operation: sdk.OperationCreate,
-				Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-				Key:       sdk.RawData(fmt.Sprintf("%v", now)),
-			},
-		}
+		s.parseAsSingleRecord(resp, body)
 		return nil
 	}
 
@@ -263,18 +276,11 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 			s.toSDKRecord(jsRec, resp),
 		)
 	}
-
 	s.lastResponseData = respData.CustomData
-
 	return nil
 }
 
 func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
-	meta := sdk.Metadata{}
-	for key, val := range resp.Header {
-		meta[key] = strings.Join(val, ",")
-	}
-
 	toSDKData := func(d interface{}) sdk.Data {
 		switch v := d.(type) {
 		case sdk.RawData:
@@ -287,16 +293,33 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 
 	return sdk.SourceUtil{}.NewRecordCreate(
 		jsRec.Position,
-		meta,
+		s.headersToMetadata(resp.Header),
 		toSDKData(jsRec.Key),
 		toSDKData(jsRec.Payload.After),
 	)
 }
 
-func (s *Source) getRequestData() (*Request, error) {
-	if !s.extension.hasGetRequestData {
-		return &Request{URL: s.config.URL}, nil
+func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) {
+	// create record
+	now := time.Now().Unix()
+	s.buffer = []sdk.Record{
+		{
+			Payload: sdk.Change{
+				Before: nil,
+				After:  sdk.RawData(body),
+			},
+			Metadata:  s.headersToMetadata(resp.Header),
+			Operation: sdk.OperationCreate,
+			Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
+			Key:       sdk.RawData(fmt.Sprintf("%v", now)),
+		},
 	}
+}
 
-	return s.extension.getRequestData(s.config, s.lastResponseData, s.lastPosition)
+func (s *Source) headersToMetadata(header http.Header) sdk.Metadata {
+	meta := sdk.Metadata{}
+	for key, val := range header {
+		meta[key] = strings.Join(val, ",")
+	}
+	return meta
 }
