@@ -147,8 +147,6 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 }
 
 func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
-	// input: config, lastPosition
-	// output: request = URL + Headers
 	if len(s.buffer) == 0 {
 		err := s.limiter.Wait(ctx)
 		if err != nil {
@@ -238,7 +236,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		// create record
 		now := time.Now().Unix()
 		s.buffer = []sdk.Record{
-			sdk.Record{
+			{
 				Payload: sdk.Change{
 					Before: nil,
 					After:  sdk.RawData(body),
@@ -277,7 +275,7 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 		meta[key] = strings.Join(val, ",")
 	}
 
-	convertData := func(d interface{}) sdk.Data {
+	toSDKData := func(d interface{}) sdk.Data {
 		switch v := d.(type) {
 		case sdk.RawData:
 			return v
@@ -290,8 +288,8 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 	return sdk.SourceUtil{}.NewRecordCreate(
 		jsRec.Position,
 		meta,
-		convertData(jsRec.Key),
-		convertData(jsRec.Payload.After),
+		toSDKData(jsRec.Key),
+		toSDKData(jsRec.Payload.After),
 	)
 }
 
