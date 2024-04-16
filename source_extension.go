@@ -23,6 +23,7 @@ import (
 	"github.com/dop251/goja_nodejs/require"
 	"github.com/dop251/goja_nodejs/url"
 	"github.com/rs/zerolog"
+	"os"
 	"sync"
 )
 
@@ -66,26 +67,31 @@ type requestDataFn struct {
 	gojaPool sync.Pool
 }
 
-func newRequestDataFn(ctx context.Context, src string) (*requestDataFn, error) {
-	sdk.Logger(ctx).Debug().Msg("check if the runtime and functions can be initialized")
+func newRequestDataFn(ctx context.Context, srcPath string) (*requestDataFn, error) {
+	sdk.Logger(ctx).Debug().Msg("check if requestDataFn can be initialized")
 	runtime, err := newRuntime(sdk.Logger(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
 	}
 
-	_, err = newFunction(runtime, src, getRequestDataFn)
+	src, err := os.ReadFile(srcPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading requestDataFn: %w", err)
+	}
+
+	_, err = newFunction(runtime, string(src), getRequestDataFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing function %q: %w", getRequestDataFn, err)
 	}
 
-	sdk.Logger(ctx).Debug().Msg("runtime and functions check: OK")
+	sdk.Logger(ctx).Debug().Msg("requestDataFn check OK")
 
 	r := &requestDataFn{}
 	r.gojaPool.New = func() any {
 		// create a new runtime for the function, so it's executed in a separate goja context
 		// todo this is not the right context (it comes from Open())
 		rt, _ := newRuntime(sdk.Logger(ctx))
-		fn, _ := newFunction(rt, src, getRequestDataFn)
+		fn, _ := newFunction(rt, string(src), getRequestDataFn)
 		return &gojaContext{
 			runtime: rt,
 			fn:      fn,
@@ -150,14 +156,19 @@ func (r *responseParser) call(responseBytes []byte) (*Response, error) {
 	return rd, nil
 }
 
-func newResponseParser(ctx context.Context, src string) (*responseParser, error) {
+func newResponseParser(ctx context.Context, srcPath string) (*responseParser, error) {
 	sdk.Logger(ctx).Debug().Msg("check if the runtime and functions can be initialized")
 	runtime, err := newRuntime(sdk.Logger(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
 	}
 
-	_, err = newFunction(runtime, src, parseResponseFn)
+	src, err := os.ReadFile(srcPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading requestDataFn: %w", err)
+	}
+
+	_, err = newFunction(runtime, string(src), parseResponseFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing function %q: %w", getRequestDataFn, err)
 	}
@@ -169,7 +180,7 @@ func newResponseParser(ctx context.Context, src string) (*responseParser, error)
 		// create a new runtime for the function, so it's executed in a separate goja context
 		// todo this is not the right context (it comes from Open())
 		rt, _ := newRuntime(sdk.Logger(ctx))
-		fn, _ := newFunction(rt, src, getRequestDataFn)
+		fn, _ := newFunction(rt, string(src), parseResponseFn)
 		return &gojaContext{
 			runtime: rt,
 			fn:      fn,

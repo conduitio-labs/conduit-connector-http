@@ -28,17 +28,10 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	underTest := newSourceExtension()
-	err := underTest.configure(
-		"./test/get_request_data.js",
-		"",
-	)
+	underTest, err := newRequestDataFn(ctx, "./test/get_request_data.js")
 	is.NoErr(err)
 
-	err = underTest.open(ctx)
-	is.NoErr(err)
-
-	data, err := underTest.getRequestData(
+	data, err := underTest.call(
 		SourceConfig{
 			Config: Config{URL: "http://example.com"},
 		},
@@ -56,17 +49,10 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 	logger := zerolog.New(zerolog.NewTestWriter(t))
 	ctx := logger.WithContext(context.Background())
 
-	underTest := newSourceExtension()
-	err := underTest.configure(
-		"",
-		"./test/parse_response.js",
-	)
+	underTest, err := newResponseParser(ctx, "./test/parse_response.js")
 	is.NoErr(err)
 
-	err = underTest.open(ctx)
-	is.NoErr(err)
-
-	resp, err := underTest.parseResponseData([]byte(`{
+	resp, err := underTest.call([]byte(`{
 	"nextSyncToken": "xyz",
 	"some_objects": [
 		{
