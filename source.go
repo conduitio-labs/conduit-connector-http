@@ -36,10 +36,10 @@ type Source struct {
 	limiter *rate.Limiter
 	header  http.Header
 
-	extension         *sourceExtension
-	lastResponseStuff map[string]any
-	buffer            []sdk.Record
-	lastPosition      sdk.Position
+	extension        *sourceExtension
+	lastResponseData map[string]any
+	buffer           []sdk.Record
+	lastPosition     sdk.Position
 }
 
 type SourceConfig struct {
@@ -130,7 +130,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	if err != nil {
 		return fmt.Errorf("failed to open extension: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -189,7 +189,7 @@ func (s *Source) Teardown(context.Context) error {
 func (s *Source) fillBuffer(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msg("filling buffer")
 	// create request
-	reqData, err := s.extension.getRequestData(s.config, s.lastResponseStuff, s.lastPosition)
+	reqData, err := s.getRequestData()
 	if err != nil {
 		return err
 	}
@@ -229,6 +229,29 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		return fmt.Errorf("error reading body for response %v: %w", resp, err)
 	}
 
+	if !s.extension.hasParseResponseData {
+		meta := sdk.Metadata{}
+		for key, val := range resp.Header {
+			meta[key] = strings.Join(val, ",")
+		}
+		
+		// create record
+		now := time.Now().Unix()
+		s.buffer = []sdk.Record{
+			sdk.Record{
+				Payload: sdk.Change{
+					Before: nil,
+					After:  sdk.RawData(body),
+				},
+				Metadata:  meta,
+				Operation: sdk.OperationCreate,
+				Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
+				Key:       sdk.RawData(fmt.Sprintf("%v", now)),
+			},
+		}
+		return nil
+	}
+
 	respData, err := s.extension.parseResponseData(body)
 	if err != nil {
 		return err
@@ -243,7 +266,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		)
 	}
 
-	s.lastResponseStuff = respData.CustomData
+	s.lastResponseData = respData.CustomData
 
 	return nil
 }
@@ -270,4 +293,12 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 		convertData(jsRec.Key),
 		convertData(jsRec.Payload.After),
 	)
+}
+
+func (s *Source) getRequestData() (*Request, error) {
+	if !s.extension.hasGetRequestData {
+		return &Request{URL: s.config.URL}, nil
+	}
+
+	return s.extension.getRequestData(s.config, s.lastResponseData, s.lastPosition)
 }

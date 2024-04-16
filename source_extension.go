@@ -71,6 +71,9 @@ type sourceExtension struct {
 	// parseResponseSrc contains the source code of the `parseResponse` function
 	parseResponseSrc string
 
+	hasGetRequestData    bool
+	hasParseResponseData bool
+
 	gojaPool sync.Pool
 }
 
@@ -105,14 +108,20 @@ func (s *sourceExtension) open(ctx context.Context) error {
 		return fmt.Errorf("failed initializing JS runtime: %w", err)
 	}
 
-	_, err = s.newFunction(runtime, s.getRequestDataSrc, getRequestDataFn)
+	getFn, err := s.newFunction(runtime, s.getRequestDataSrc, getRequestDataFn)
 	if err != nil {
 		return fmt.Errorf("failed initializing function %q: %w", getRequestDataFn, err)
 	}
+	if getFn != nil {
+		s.hasGetRequestData = true
+	}
 
-	_, err = s.newFunction(runtime, s.parseResponseSrc, parseResponseFn)
+	parseFn, err := s.newFunction(runtime, s.parseResponseSrc, parseResponseFn)
 	if err != nil {
 		return fmt.Errorf("failed initializing function %q: %w", parseResponseFn, err)
+	}
+	if parseFn != nil {
+		s.hasParseResponseData = true
 	}
 
 	sdk.Logger(ctx).Debug().Msg("runtime and functions check: OK")
