@@ -68,7 +68,9 @@ type requestDataFn struct {
 }
 
 func newRequestDataFn(ctx context.Context, srcPath string) (*requestDataFn, error) {
-	sdk.Logger(ctx).Debug().Msgf("check if requestDataFn can be initialized with %v", srcPath)
+	sdk.Logger(ctx).Debug().
+		Str("path", srcPath).
+		Msgf("check if requestDataFn can be initialized with %v", srcPath)
 	runtime, err := newRuntime(sdk.Logger(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
@@ -157,7 +159,9 @@ func (r *responseParser) call(responseBytes []byte) (*Response, error) {
 }
 
 func newResponseParser(ctx context.Context, srcPath string) (*responseParser, error) {
-	sdk.Logger(ctx).Debug().Msgf("check if requestDataFn can be initialized with %v", srcPath)
+	sdk.Logger(ctx).Debug().
+		Str("path", srcPath).
+		Msgf("check if requestDataFn can be initialized with %v", srcPath)
 	runtime, err := newRuntime(sdk.Logger(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
