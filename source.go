@@ -97,12 +97,12 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 		return fmt.Errorf("invalid header config: %w", err)
 	}
 
-	s.requestDataFn, err = newRequestDataFn(ctx, s.config.GetRequestDataScript)
+	s.requestDataFn, err = newRequestDataFn(ctx, config.GetRequestDataScript)
 	if err != nil {
 		return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 	}
 
-	s.responseParser, err = newResponseParser(ctx, s.config.ParseResponseScript)
+	s.responseParser, err = newResponseParser(ctx, config.ParseResponseScript)
 	if err != nil {
 		return fmt.Errorf("failed initializing %v: %w", parseResponseFn, err)
 	}
