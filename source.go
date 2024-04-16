@@ -146,10 +146,6 @@ func (s *Source) testConnection(ctx context.Context) error {
 }
 
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
-	err := s.limiter.Wait(ctx)
-	if err != nil {
-		return sdk.Record{}, err
-	}
 	rec, err := s.getRecord(ctx)
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
