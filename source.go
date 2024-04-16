@@ -77,7 +77,9 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 }
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
-	sdk.Logger(ctx).Info().Msg("configuring source...")
+	sdk.Logger(ctx).Info().
+		Any("config_map", cfg).
+		Msg("configuring source...")
 
 	var config SourceConfig
 	err := sdk.Util.ParseConfig(cfg, &config)
