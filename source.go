@@ -234,7 +234,7 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 		for key, val := range resp.Header {
 			meta[key] = strings.Join(val, ",")
 		}
-		
+
 		// create record
 		now := time.Now().Unix()
 		s.buffer = []sdk.Record{
@@ -279,8 +279,8 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 
 	convertData := func(d interface{}) sdk.Data {
 		switch v := d.(type) {
-		case *sdk.RawData:
-			return *v
+		case sdk.RawData:
+			return v
 		case map[string]interface{}:
 			return sdk.StructuredData(v)
 		}
