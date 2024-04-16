@@ -124,6 +124,7 @@ func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
 	}
 
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
+	s.lastPosition = pos
 
 	return nil
 }
