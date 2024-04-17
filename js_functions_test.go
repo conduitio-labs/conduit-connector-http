@@ -26,7 +26,7 @@ import (
 
 func TestSourceExtension_GetRequestData(t *testing.T) {
 	is := is.New(t)
-	ctx := context.Background()
+	ctx := zerolog.New(zerolog.NewTestWriter(t)).WithContext(context.Background())
 
 	underTest, err := newRequestDataFn(ctx, "./test/get_request_data.js")
 	is.NoErr(err)
@@ -46,8 +46,7 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 
 func TestSourceExtension_ParseResponse(t *testing.T) {
 	is := is.New(t)
-	logger := zerolog.New(zerolog.NewTestWriter(t))
-	ctx := logger.WithContext(context.Background())
+	ctx := zerolog.New(zerolog.NewTestWriter(t)).WithContext(context.Background())
 
 	underTest, err := newResponseParser(ctx, "./test/parse_response.js")
 	is.NoErr(err)
