@@ -17,15 +17,15 @@ package http
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.uber.org/mock/gomock"
 	"net/http"
 	"testing"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
 
 func TestTeardownSource_NoOpen(t *testing.T) {
