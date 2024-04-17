@@ -10,6 +10,7 @@
 package http
 
 import (
+	context "context"
 	reflect "reflect"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -40,18 +41,18 @@ func (m *MockRequestBuilder) EXPECT() *MockRequestBuilderMockRecorder {
 }
 
 // build mocks base method.
-func (m *MockRequestBuilder) build(previousResponseData map[string]any, position sdk.Position) (*Request, error) {
+func (m *MockRequestBuilder) build(ctx context.Context, previousResponseData map[string]any, position sdk.Position) (*Request, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "build", previousResponseData, position)
+	ret := m.ctrl.Call(m, "build", ctx, previousResponseData, position)
 	ret0, _ := ret[0].(*Request)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // build indicates an expected call of build.
-func (mr *MockRequestBuilderMockRecorder) build(previousResponseData, position any) *gomock.Call {
+func (mr *MockRequestBuilderMockRecorder) build(ctx, previousResponseData, position any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "build", reflect.TypeOf((*MockRequestBuilder)(nil).build), previousResponseData, position)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "build", reflect.TypeOf((*MockRequestBuilder)(nil).build), ctx, previousResponseData, position)
 }
 
 // MockresponseParser is a mock of responseParser interface.
@@ -78,16 +79,16 @@ func (m *MockresponseParser) EXPECT() *MockresponseParserMockRecorder {
 }
 
 // parse mocks base method.
-func (m *MockresponseParser) parse(responseBytes []byte) (*Response, error) {
+func (m *MockresponseParser) parse(ctx context.Context, responseBytes []byte) (*Response, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "parse", responseBytes)
+	ret := m.ctrl.Call(m, "parse", ctx, responseBytes)
 	ret0, _ := ret[0].(*Response)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // parse indicates an expected call of parse.
-func (mr *MockresponseParserMockRecorder) parse(responseBytes any) *gomock.Call {
+func (mr *MockresponseParserMockRecorder) parse(ctx, responseBytes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "parse", reflect.TypeOf((*MockresponseParser)(nil).parse), responseBytes)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "parse", reflect.TypeOf((*MockresponseParser)(nil).parse), ctx, responseBytes)
 }

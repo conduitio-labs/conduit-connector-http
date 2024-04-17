@@ -203,7 +203,7 @@ func TestSource_CustomRequest(t *testing.T) {
 
 	rb := NewMockRequestBuilder(gomock.NewController(t))
 	rb.EXPECT().
-		build(previousResp, pos).
+		build(ctx, previousResp, pos).
 		Return(&Request{URL: "http://localhost:8082/resource/resource1"}, nil)
 	src.requestBuilder = rb
 
@@ -244,7 +244,7 @@ func TestSource_ParseResponse(t *testing.T) {
 
 	rp := NewMockResponseParser(gomock.NewController(t))
 	rp.EXPECT().
-		parse([]byte("This is resource 1")).
+		parse(ctx, []byte("This is resource 1")).
 		Return(
 			&Response{Records: []*jsRecord{{
 				Position:  []byte("pagination-token"),

@@ -34,13 +34,14 @@ import (
 
 type requestBuilder interface {
 	build(
+		ctx context.Context,
 		previousResponseData map[string]any,
 		position sdk.Position,
 	) (*Request, error)
 }
 
 type responseParser interface {
-	parse(responseBytes []byte) (*Response, error)
+	parse(ctx context.Context, responseBytes []byte) (*Response, error)
 }
 
 type Source struct {
@@ -219,7 +220,7 @@ func (s *Source) Teardown(context.Context) error {
 func (s *Source) fillBuffer(ctx context.Context) error {
 	sdk.Logger(ctx).Debug().Msg("filling buffer")
 	// create request
-	reqData, err := s.getRequestData()
+	reqData, err := s.getRequestData(ctx)
 	if err != nil {
 		return err
 	}
@@ -265,12 +266,12 @@ func (s *Source) buildError(resp *http.Response) error {
 	)
 }
 
-func (s *Source) getRequestData() (*Request, error) {
+func (s *Source) getRequestData(ctx context.Context) (*Request, error) {
 	if s.requestBuilder == nil {
 		return &Request{URL: s.config.URL}, nil
 	}
 
-	return s.requestBuilder.build(s.lastResponseData, s.lastPosition)
+	return s.requestBuilder.build(ctx, s.lastResponseData, s.lastPosition)
 }
 
 func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
@@ -288,7 +289,7 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 		return nil
 	}
 
-	respData, err := s.responseParser.parse(body)
+	respData, err := s.responseParser.parse(ctx, body)
 	if err != nil {
 		return err
 	}

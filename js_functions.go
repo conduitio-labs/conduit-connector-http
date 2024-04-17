@@ -63,11 +63,18 @@ type gojaContext struct {
 	fn      goja.Callable
 }
 
+func (c gojaContext) addLogger(logger *zerolog.Logger) error {
+	if err := c.runtime.Set("logger", logger); err != nil {
+		return fmt.Errorf("failed to set logger: %w", err)
+	}
+
+	return nil
+}
+
 func newGojaContext(ctx context.Context, srcPath, fnName string) (*gojaContext, error) {
 	sdk.Logger(ctx).Debug().Msgf("check if JS function can be initialized with %v", srcPath)
 
-	// todo wrong context (comes from Open(), should be from Read())
-	runtime, err := newRuntime(sdk.Logger(ctx))
+	runtime, err := newRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
 	}
@@ -103,11 +110,17 @@ func newJSRequestBuilder(ctx context.Context, cfg map[string]string, srcPath str
 }
 
 func (r *jsRequestBuilder) build(
+	ctx context.Context,
 	previousResponseData map[string]any,
 	position sdk.Position,
 ) (*Request, error) {
 	if r.gojaCtx == nil {
-		return nil, errors.New("getRequestData function has not been initialized")
+		return nil, errors.New("function has not been initialized")
+	}
+
+	err := r.gojaCtx.addLogger(sdk.Logger(ctx))
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := r.gojaCtx.fn(
@@ -132,9 +145,14 @@ type jsResponseParser struct {
 	gojaCtx *gojaContext
 }
 
-func (r *jsResponseParser) parse(responseBytes []byte) (*Response, error) {
+func (r *jsResponseParser) parse(ctx context.Context, responseBytes []byte) (*Response, error) {
 	if r.gojaCtx == nil {
 		return nil, errors.New("parseResponse function has not been initialized")
+	}
+
+	err := r.gojaCtx.addLogger(sdk.Logger(ctx))
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := r.gojaCtx.fn(goja.Undefined(), r.gojaCtx.runtime.ToValue(responseBytes))
@@ -159,13 +177,12 @@ func newJSResponseParser(ctx context.Context, srcPath string) (*jsResponseParser
 	return &jsResponseParser{gojaCtx: gojaCtx}, nil
 }
 
-func newRuntime(logger *zerolog.Logger) (*goja.Runtime, error) {
+func newRuntime() (*goja.Runtime, error) {
 	rt := goja.New()
 	require.NewRegistry().Enable(rt)
 	url.Enable(rt)
 
 	runtimeHelpers := map[string]interface{}{
-		"logger":         &logger,
 		"Record":         newRecord(rt),
 		"RawData":        newRawData(rt),
 		"StructuredData": newStructuredData(rt),

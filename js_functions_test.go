@@ -38,6 +38,7 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 	is.NoErr(err)
 
 	data, err := underTest.build(
+		ctx,
 		map[string]any{
 			"nextPageToken": "abc",
 		},
@@ -54,21 +55,24 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 	underTest, err := newJSResponseParser(ctx, "./test/parse_response.js")
 	is.NoErr(err)
 
-	resp, err := underTest.parse([]byte(`{
-	"nextSyncToken": "xyz",
-	"some_objects": [
-		{
-			"id": "id-a",
-			"action": "update",
-			"field_a": "value_a"
-		},
-		{
-			"id": "id-b",
-			"field_b": "value_b",
-			"field_c": "value_c"
-		}
-	]
-}`))
+	resp, err := underTest.parse(
+		ctx,
+		[]byte(`{
+			"nextSyncToken": "xyz",
+			"some_objects": [
+				{
+					"id": "id-a",
+					"action": "update",
+					"field_a": "value_a"
+				},
+				{
+					"id": "id-b",
+					"field_b": "value_b",
+					"field_c": "value_c"
+				}
+			]
+		}`),
+	)
 	is.NoErr(err)
 
 	diff := cmp.Diff(
