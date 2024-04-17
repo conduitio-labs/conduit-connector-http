@@ -18,12 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/require"
 	"github.com/dop251/goja_nodejs/url"
 	"github.com/rs/zerolog"
-	"os"
 )
 
 var (

@@ -322,7 +322,6 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) (sdk.Record, 
 }
 
 func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) sdk.Record {
-	// create record
 	now := time.Now().Unix()
 	return sdk.Record{
 		Payload: sdk.Change{
@@ -342,5 +341,6 @@ func (s *Source) headersToMetadata(header http.Header) sdk.Metadata {
 		meta[key] = strings.Join(val, ",")
 	}
 	meta.SetReadAt(time.Now())
+
 	return meta
 }
