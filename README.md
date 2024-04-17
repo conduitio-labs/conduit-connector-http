@@ -43,12 +43,23 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
     - default value: "5m"
 - 
 - `script.getRequestData`:
-    - description: The path to a .js file containing the code to prepare the request data. The signature of the function needs to be: `function getRequestData(cfg, previousResponse, position)` where: * `cfg` (a map) is the connector configuration * `previousResponse` (a map) contains data from the previous response (if any), returned by `parseResponse` * `position` (a byte array) contains the starting position of the connector. The function needs to return a Request object.
+    - description: The path to a .js file containing the code to prepare the request data. 
+        The signature of the function needs to be: 
+        `function getRequestData(cfg, previousResponse, position)`
+        where: 
+        - `cfg` (a map) is the connector configuration 
+        - `previousResponse` (a map) contains data from the previous response (if any), returned by `parseResponse`
+        - `position` (a byte array) contains the starting position of the connector. 
+        The function needs to return a `Request` object.
     - required: false
     - default: ""
 
 - `script.parseResponse`:
-    - description: The path to a .js file containing the code to parse the response. The signature of the function needs to be: `function parseResponse(bytes)` where `bytes` are the original response's raw bytes (i.e. unparsed). The response should be a Response object.
+    - description: The path to a .js file containing the code to parse the response. 
+        The signature of the function needs to be: 
+        `function parseResponse(bytes)` 
+        where `bytes` is the original response's raw bytes (i.e. unparsed). 
+        The response should be a `Response` object.
     - required: false
     - default: ""
 
