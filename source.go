@@ -28,6 +28,19 @@ import (
 	"golang.org/x/time/rate"
 )
 
+//go:generate mockgen -destination=mock_request_builder.go -source=source.go -package=http -mock_names=requestBuilder=MockRequestBuilder . requestBuilder
+
+type requestBuilder interface {
+	build(
+		previousResponseData map[string]any,
+		position sdk.Position,
+	) (*Request, error)
+}
+
+type responseParser interface {
+	parse(responseBytes []byte) (*Response, error)
+}
+
 type Source struct {
 	sdk.UnimplementedSource
 
@@ -41,8 +54,8 @@ type Source struct {
 	buffer           []sdk.Record
 	lastPosition     sdk.Position
 
-	requestDataFn  *requestDataFn
-	responseParser *responseParser
+	requestBuilder requestBuilder
+	responseParser responseParser
 }
 
 type SourceConfig struct {
@@ -96,14 +109,14 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	}
 
 	if config.GetRequestDataScript != "" {
-		s.requestDataFn, err = newRequestDataFn(ctx, config.GetRequestDataScript)
+		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}
 	}
 
 	if config.ParseResponseScript != "" {
-		s.responseParser, err = newResponseParser(ctx, config.ParseResponseScript)
+		s.responseParser, err = newJSResponseParser(ctx, config.ParseResponseScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", parseResponseFn, err)
 		}
@@ -251,11 +264,11 @@ func (s *Source) buildError(resp *http.Response) error {
 }
 
 func (s *Source) getRequestData() (*Request, error) {
-	if s.requestDataFn == nil {
+	if s.requestBuilder == nil {
 		return &Request{URL: s.config.URL}, nil
 	}
 
-	return s.requestDataFn.call(s.config, s.lastResponseData, s.lastPosition)
+	return s.requestBuilder.build(s.lastResponseData, s.lastPosition)
 }
 
 func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
@@ -273,7 +286,7 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 		return nil
 	}
 
-	respData, err := s.responseParser.call(body)
+	respData, err := s.responseParser.parse(body)
 	if err != nil {
 		return err
 	}

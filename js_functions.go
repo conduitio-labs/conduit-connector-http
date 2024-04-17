@@ -88,20 +88,21 @@ func newGojaContext(ctx context.Context, srcPath, fnName string) (*gojaContext, 
 	}, nil
 }
 
-type requestDataFn struct {
+type jsRequestBuilder struct {
 	gojaCtx *gojaContext
+	cfg     map[string]string
 }
 
-func newRequestDataFn(ctx context.Context, srcPath string) (*requestDataFn, error) {
+func newJSRequestBuilder(ctx context.Context, cfg map[string]string, srcPath string) (*jsRequestBuilder, error) {
 	gojaCtx, err := newGojaContext(ctx, srcPath, getRequestDataFn)
 	if err != nil {
 		return nil, err
 	}
-	return &requestDataFn{gojaCtx: gojaCtx}, nil
+
+	return &jsRequestBuilder{gojaCtx: gojaCtx, cfg: cfg}, nil
 }
 
-func (r *requestDataFn) call(
-	cfg SourceConfig,
+func (r *jsRequestBuilder) build(
 	previousResponseData map[string]any,
 	position sdk.Position,
 ) (*Request, error) {
@@ -109,9 +110,9 @@ func (r *requestDataFn) call(
 		return nil, errors.New("getRequestData function has not been initialized")
 	}
 
-	fn, err := r.gojaCtx.fn(
+	result, err := r.gojaCtx.fn(
 		goja.Undefined(),
-		r.gojaCtx.runtime.ToValue(cfg),
+		r.gojaCtx.runtime.ToValue(r.cfg),
 		r.gojaCtx.runtime.ToValue(previousResponseData),
 		r.gojaCtx.runtime.ToValue(position),
 	)
@@ -119,43 +120,43 @@ func (r *requestDataFn) call(
 		return nil, err
 	}
 
-	rd, ok := fn.Export().(*Request)
+	rd, ok := result.Export().(*Request)
 	if !ok {
-		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Request{}, fn)
+		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Request{}, result)
 	}
 
 	return rd, nil
 }
 
-type responseParser struct {
+type jsResponseParser struct {
 	gojaCtx *gojaContext
 }
 
-func (r *responseParser) call(responseBytes []byte) (*Response, error) {
+func (r *jsResponseParser) parse(responseBytes []byte) (*Response, error) {
 	if r.gojaCtx == nil {
 		return nil, errors.New("parseResponse function has not been initialized")
 	}
 
-	fn, err := r.gojaCtx.fn(goja.Undefined(), r.gojaCtx.runtime.ToValue(responseBytes))
+	result, err := r.gojaCtx.fn(goja.Undefined(), r.gojaCtx.runtime.ToValue(responseBytes))
 	if err != nil {
 		return nil, err
 	}
 
-	rd, ok := fn.Export().(*Response)
+	rd, ok := result.Export().(*Response)
 	if !ok {
-		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Response{}, fn)
+		return nil, fmt.Errorf("js function expected to return %T, but returned: %T", &Response{}, result)
 	}
 
 	return rd, nil
 }
 
-func newResponseParser(ctx context.Context, srcPath string) (*responseParser, error) {
+func newJSResponseParser(ctx context.Context, srcPath string) (*jsResponseParser, error) {
 	gojaCtx, err := newGojaContext(ctx, srcPath, parseResponseFn)
 	if err != nil {
 		return nil, err
 	}
 
-	return &responseParser{gojaCtx: gojaCtx}, nil
+	return &jsResponseParser{gojaCtx: gojaCtx}, nil
 }
 
 func newRuntime(logger *zerolog.Logger) (*goja.Runtime, error) {

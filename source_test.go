@@ -17,6 +17,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"go.uber.org/mock/gomock"
 	"net/http"
 	"testing"
 	"time"
@@ -37,15 +38,18 @@ func TestSource_Get(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
 		"method": "GET",
 	})
 	is.NoErr(err)
+
 	err = src.Open(ctx, sdk.Position{})
 	is.NoErr(err)
+
 	rec, err := src.Read(ctx)
 	is.NoErr(err)
 	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
@@ -55,15 +59,18 @@ func TestSource_Options(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
 		"method": "OPTIONS",
 	})
 	is.NoErr(err)
+
 	err = src.Open(ctx, sdk.Position{})
 	is.NoErr(err)
+
 	rec, err := src.Read(ctx)
 	is.NoErr(err)
 	meta, ok := rec.Metadata["Allow"]
@@ -75,15 +82,18 @@ func TestSource_Head(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/",
 		"method": "HEAD",
 	})
 	is.NoErr(err)
+
 	err = src.Open(ctx, sdk.Position{})
 	is.NoErr(err)
+
 	_, err = src.Read(ctx)
 	is.NoErr(err)
 }
@@ -94,7 +104,7 @@ var ResourceMap = map[string]string{
 	"resource2": "This is resource 2",
 }
 
-func createServer() (*http.ServeMux, error) {
+func createServer() func() {
 	// Define the server address
 	address := ":8082"
 
@@ -135,6 +145,7 @@ func createServer() (*http.ServeMux, error) {
 		ReadTimeout:  10 * time.Second, // Set your desired read timeout
 		WriteTimeout: 10 * time.Second, // Set your desired write timeout
 	}
+
 	// Start the HTTP server
 	go func() {
 		err := serverInstance.ListenAndServe()
@@ -142,5 +153,44 @@ func createServer() (*http.ServeMux, error) {
 			fmt.Printf("Server error: %s\n", err)
 		}
 	}()
-	return server, nil
+
+	return func() {
+		err := serverInstance.Shutdown(context.Background())
+		if err != nil {
+			fmt.Printf("Server error: %s\n", err)
+		}
+	}
+}
+
+func TestSource_CustomRequest(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":                   "http://localhost:8082/resource/default-resource",
+		"method":                "GET",
+		"script.getRequestData": "./test/TestSource_CustomRequest.js",
+	}
+	var previousResp map[string]interface{}
+	pos := sdk.Position("test-position")
+
+	rb := NewMockRequestBuilder(gomock.NewController(t))
+	rb.EXPECT().
+		build(previousResp, pos).
+		Return(&Request{URL: "http://localhost:8082/resource/resource1"}, nil)
+	src.requestBuilder = rb
+
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, pos)
+	is.NoErr(err)
+
+	rec, err := src.Read(ctx)
+	is.NoErr(err)
+	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
 }

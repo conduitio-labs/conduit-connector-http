@@ -1,6 +1,6 @@
 function getRequestData(cfg, previousResponse, position) {
     let request = new Request()
-    let url = new URL(cfg.URL)
+    let url = new URL(cfg["url"])
     if (previousResponse["nextPageToken"] != undefined) {
         url.searchParams.set("pageToken", previousResponse["nextPageToken"])
     } else {
