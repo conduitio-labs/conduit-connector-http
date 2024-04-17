@@ -19,13 +19,13 @@ package http
 import (
 	"context"
 	"fmt"
-	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"golang.org/x/exp/maps"
 	"golang.org/x/time/rate"
 )
 
