@@ -19,6 +19,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
 	"strings"
@@ -29,6 +30,7 @@ import (
 )
 
 //go:generate mockgen -destination=mock_request_builder.go -source=source.go -package=http -mock_names=requestBuilder=MockRequestBuilder . requestBuilder
+//go:generate mockgen -destination=mock_response_parser.go -source=source.go -package=http -mock_names=responseParser=MockResponseParser . responseParser
 
 type requestBuilder interface {
 	build(
@@ -322,10 +324,13 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) (sdk.Record, 
 		return sdk.Record{}, fmt.Errorf("could not unmarshal operation: %w", err)
 	}
 
+	meta := s.headersToMetadata(resp.Header)
+	maps.Copy(meta, jsRec.Metadata)
+
 	return sdk.Record{
 		Position:  jsRec.Position,
 		Operation: op,
-		Metadata:  s.headersToMetadata(resp.Header),
+		Metadata:  meta,
 		Key:       toSDKData(jsRec.Key),
 		Payload: sdk.Change{
 			Before: toSDKData(jsRec.Payload.Before),

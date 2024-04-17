@@ -17,6 +17,8 @@ package http
 import (
 	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/mock/gomock"
 	"net/http"
 	"testing"
@@ -168,9 +170,8 @@ func TestSource_CustomRequest(t *testing.T) {
 
 	src := NewSource().(*Source)
 	cfg := map[string]string{
-		"url":                   "http://localhost:8082/resource/default-resource",
-		"method":                "GET",
-		"script.getRequestData": "./test/TestSource_CustomRequest.js",
+		"url":    "http://localhost:8082/resource/default-resource",
+		"method": "GET",
 	}
 	var previousResp map[string]interface{}
 	pos := sdk.Position("test-position")
@@ -193,4 +194,66 @@ func TestSource_CustomRequest(t *testing.T) {
 	rec, err := src.Read(ctx)
 	is.NoErr(err)
 	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
+}
+
+func TestSource_ParseResponse(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":    "http://localhost:8082/resource/resource1",
+		"method": "GET",
+	}
+	want := sdk.Record{
+		Position:  sdk.Position("pagination-token"),
+		Operation: sdk.OperationUpdate,
+		Metadata:  map[string]string{"foo": "bar"},
+		Key:       sdk.RawData("record-key"),
+		Payload: sdk.Change{
+			After: sdk.StructuredData{
+				"field-a": "value-a",
+			},
+		},
+	}
+
+	rp := NewMockResponseParser(gomock.NewController(t))
+	rp.EXPECT().
+		parse([]byte("This is resource 1")).
+		Return(
+			&Response{Records: []*jsRecord{{
+				Position:  []byte("pagination-token"),
+				Operation: "update",
+				Metadata:  map[string]string{"foo": "bar"},
+				Key:       sdk.RawData("record-key"),
+				Payload: jsPayload{
+					After: map[string]interface{}{
+						"field-a": "value-a",
+					},
+				},
+			}}},
+			nil,
+		)
+	src.responseParser = rp
+
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, nil)
+	is.NoErr(err)
+
+	got, err := src.Read(ctx)
+	is.NoErr(err)
+	want.Metadata["Content-Length"] = got.Metadata["Content-Length"]
+	want.Metadata["Content-Type"] = got.Metadata["Content-Type"]
+	want.Metadata["Date"] = got.Metadata["Date"]
+	want.Metadata["opencdc.readAt"] = got.Metadata["opencdc.readAt"]
+
+	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sdk.Record{}))
+	if diff != "" {
+		t.Errorf("mismatch (-want +got): %s", diff)
+	}
 }
