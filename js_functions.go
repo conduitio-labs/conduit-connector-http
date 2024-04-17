@@ -16,7 +16,6 @@ package http
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
@@ -72,8 +71,6 @@ func (c gojaContext) addLogger(logger *zerolog.Logger) error {
 }
 
 func newGojaContext(ctx context.Context, srcPath, fnName string) (*gojaContext, error) {
-	sdk.Logger(ctx).Debug().Msgf("check if JS function can be initialized with %v", srcPath)
-
 	runtime, err := newRuntime()
 	if err != nil {
 		return nil, fmt.Errorf("failed initializing JS runtime: %w", err)
@@ -114,10 +111,6 @@ func (r *jsRequestBuilder) build(
 	previousResponseData map[string]any,
 	position sdk.Position,
 ) (*Request, error) {
-	if r.gojaCtx == nil {
-		return nil, errors.New("function has not been initialized")
-	}
-
 	err := r.gojaCtx.addLogger(sdk.Logger(ctx))
 	if err != nil {
 		return nil, err
@@ -146,10 +139,6 @@ type jsResponseParser struct {
 }
 
 func (r *jsResponseParser) parse(ctx context.Context, responseBytes []byte) (*Response, error) {
-	if r.gojaCtx == nil {
-		return nil, errors.New("parseResponse function has not been initialized")
-	}
-
 	err := r.gojaCtx.addLogger(sdk.Logger(ctx))
 	if err != nil {
 		return nil, err
@@ -225,6 +214,7 @@ func newFunction(runtime *goja.Runtime, src string, fnName string) (goja.Callabl
 
 func newRawData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
+		// Make it possible to construct a RawData object from a string
 		var r sdk.RawData
 		if len(call.Arguments) > 0 {
 			r = sdk.RawData(call.Argument(0).String())
@@ -251,7 +241,7 @@ func newRecord(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 		// not changing call.This instanceof will not work as expected.
 
 		// JavaScript records are always initialized with metadata
-		// so that it's easier to write processor code
+		// so that it's easier to write the JS code
 		// (without worrying about initializing it every time)
 		r := jsRecord{
 			Metadata: make(map[string]string),

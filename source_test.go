@@ -28,6 +28,72 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+// ResourceMap stores resources
+var ResourceMap = map[string]string{
+	"resource1": "This is resource 1",
+	"resource2": "This is resource 2",
+}
+
+// createServer creates an HTTP server.
+// Returns a function that shuts down the server.
+func createServer() func() {
+	// Define the server address
+	address := ":8082"
+
+	// Create a new HTTP server
+	server := http.NewServeMux()
+
+	// Handler for GET requests
+	server.HandleFunc("/resource/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Extract resource name from URL
+			resourceName := r.URL.Path[len("/resource/"):]
+			resource, found := ResourceMap[resourceName]
+			if !found {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			// Return the resource
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, "%s", resource)
+		case http.MethodHead:
+			// Respond with headers only
+			w.WriteHeader(http.StatusOK)
+		case http.MethodOptions:
+			// Respond with allowed methods
+			w.Header().Set("Allow", "GET, HEAD, OPTIONS")
+			w.WriteHeader(http.StatusOK)
+		default:
+			// Method not allowed
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	})
+
+	serverInstance := &http.Server{
+		Addr:         address,
+		Handler:      server,
+		ReadTimeout:  10 * time.Second, // Set your desired read timeout
+		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+	}
+
+	// Start the HTTP server
+	go func() {
+		err := serverInstance.ListenAndServe()
+		if err != nil {
+			fmt.Printf("Server error: %s\n", err)
+		}
+	}()
+
+	return func() {
+		err := serverInstance.Shutdown(context.Background())
+		if err != nil {
+			fmt.Printf("Server error: %s\n", err)
+		}
+	}
+}
+
 func TestTeardownSource_NoOpen(t *testing.T) {
 	con := NewSource()
 	err := con.Teardown(context.Background())
@@ -98,70 +164,6 @@ func TestSource_Head(t *testing.T) {
 
 	_, err = src.Read(ctx)
 	is.NoErr(err)
-}
-
-// ResourceMap stores resources
-var ResourceMap = map[string]string{
-	"resource1": "This is resource 1",
-	"resource2": "This is resource 2",
-}
-
-func createServer() func() {
-	// Define the server address
-	address := ":8082"
-
-	// Create a new HTTP server
-	server := http.NewServeMux()
-
-	// Handler for GET requests
-	server.HandleFunc("/resource/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			// Extract resource name from URL
-			resourceName := r.URL.Path[len("/resource/"):]
-			resource, found := ResourceMap[resourceName]
-			if !found {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			// Return the resource
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, "%s", resource)
-		case http.MethodHead:
-			// Respond with headers only
-			w.WriteHeader(http.StatusOK)
-		case http.MethodOptions:
-			// Respond with allowed methods
-			w.Header().Set("Allow", "GET, HEAD, OPTIONS")
-			w.WriteHeader(http.StatusOK)
-		default:
-			// Method not allowed
-			w.WriteHeader(http.StatusMethodNotAllowed)
-		}
-	})
-
-	serverInstance := &http.Server{
-		Addr:         address,
-		Handler:      server,
-		ReadTimeout:  10 * time.Second, // Set your desired read timeout
-		WriteTimeout: 10 * time.Second, // Set your desired write timeout
-	}
-
-	// Start the HTTP server
-	go func() {
-		err := serverInstance.ListenAndServe()
-		if err != nil {
-			fmt.Printf("Server error: %s\n", err)
-		}
-	}()
-
-	return func() {
-		err := serverInstance.Shutdown(context.Background())
-		if err != nil {
-			fmt.Printf("Server error: %s\n", err)
-		}
-	}
 }
 
 func TestSource_ConfigureWithScripts(t *testing.T) {
