@@ -144,19 +144,3 @@ func createServer() (*http.ServeMux, error) {
 	}()
 	return server, nil
 }
-
-func TestSource_Configure(t *testing.T) {
-	underTest := NewSource()
-	ctx := context.Background()
-
-	err := underTest.Configure(ctx, map[string]string{
-		"headers":               "Authorization:Bearer ya29.a0Ad52N39O6bkNZ-YahRgaaWVFpVQJYPYvkEClnDFZe-mtrCcXaeQPhE-RsZNaYD0GE2mBg8QMgOVE_GWgxq_0Ht8beZndBOG5c8qROpdUrav9NXO1fPTGvlRCuR2LD7wSDMNKMR6sgjXIhco2yNSvPasy1XwKGG5LIBdSaCgYKAZcSARMSFQHGX2MiBGRi-i7LHjtETSLimcWz9w0171",
-		"method":                "GET",
-		"params":                "",
-		"pollingPeriod":         "5s",
-		"script.getRequestData": "/home/haris/projects/conduitio/conduit/connectors/js/get_request_data.js",
-		"script.parseResponse":  "/home/haris/projects/conduitio/conduit/connectors/js/parse_response.js",
-		"url":                   "https://people.googleapis.com/v1/people/me/connections",
-	})
-	is.New(t).NoErr(err)
-}
