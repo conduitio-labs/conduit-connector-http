@@ -164,6 +164,31 @@ func createServer() func() {
 	}
 }
 
+func TestSource_ConfigureWithScripts(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":                   "http://localhost:8082/resource/default-resource",
+		"method":                "GET",
+		"script.getRequestData": "./test/get_request_data.js",
+		"script.parseResponse":  "./test/parse_response.js",
+	}
+
+	srvShutdown := createServer()
+	defer srvShutdown()
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, nil)
+	is.NoErr(err)
+
+	is.True(src.requestBuilder != nil)
+	is.True(src.responseParser != nil)
+}
+
 func TestSource_CustomRequest(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
