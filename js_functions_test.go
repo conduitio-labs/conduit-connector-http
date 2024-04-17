@@ -56,6 +56,7 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 	"some_objects": [
 		{
 			"id": "id-a",
+			"action": "update",
 			"field_a": "value_a"
 		},
 		{
@@ -71,9 +72,10 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 		resp.Records,
 		[]*jsRecord{
 			{
-				Position: []byte("xyz"),
-				Key:      sdk.RawData("id-a"),
-				Metadata: make(map[string]string),
+				Position:  []byte("xyz"),
+				Key:       sdk.RawData("id-a"),
+				Metadata:  make(map[string]string),
+				Operation: "update",
 				Payload: jsPayload{
 					After: map[string]any{"field_a": "value_a"},
 				},

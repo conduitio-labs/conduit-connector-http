@@ -77,9 +77,7 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 }
 
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
-	sdk.Logger(ctx).Info().
-		Any("config_map", cfg).
-		Msg("configuring source...")
+	sdk.Logger(ctx).Info().Msg("configuring source...")
 
 	var config SourceConfig
 	err := sdk.Util.ParseConfig(cfg, &config)
@@ -271,7 +269,7 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 
 	// no custom parsing, the whole response is transformed into a record
 	if s.responseParser == nil {
-		s.parseAsSingleRecord(resp, body)
+		s.buffer = append(s.buffer, s.parseAsSingleRecord(resp, body))
 		return nil
 	}
 
@@ -280,19 +278,21 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 		return err
 	}
 
-	sdk.Logger(ctx).Debug().Msgf("parsing %v JS records into SDK records", len(respData.Records))
+	sdk.Logger(ctx).Debug().Int("count", len(respData.Records)).Msg("parsing JS records into SDK records")
+
 	for _, jsRec := range respData.Records {
-		s.buffer = append(
-			s.buffer,
-			s.toSDKRecord(jsRec, resp),
-		)
+		rec, err := s.toSDKRecord(jsRec, resp)
+		if err != nil {
+			return fmt.Errorf("failed converting JS record to sdk.Record: %w", err)
+		}
+		s.buffer = append(s.buffer, rec)
 	}
 	s.lastResponseData = respData.CustomData
 
 	return nil
 }
 
-func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
+func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) (sdk.Record, error) {
 	toSDKData := func(d interface{}) sdk.Data {
 		switch v := d.(type) {
 		case sdk.RawData:
@@ -303,28 +303,36 @@ func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) sdk.Record {
 		return nil
 	}
 
-	return sdk.SourceUtil{}.NewRecordCreate(
-		jsRec.Position,
-		s.headersToMetadata(resp.Header),
-		toSDKData(jsRec.Key),
-		toSDKData(jsRec.Payload.After),
-	)
+	var op sdk.Operation
+	err := op.UnmarshalText([]byte(jsRec.Operation))
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("could not unmarshal operation: %w", err)
+	}
+
+	return sdk.Record{
+		Position:  jsRec.Position,
+		Operation: op,
+		Metadata:  s.headersToMetadata(resp.Header),
+		Key:       toSDKData(jsRec.Key),
+		Payload: sdk.Change{
+			Before: toSDKData(jsRec.Payload.Before),
+			After:  toSDKData(jsRec.Payload.After),
+		},
+	}, nil
 }
 
-func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) {
+func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) sdk.Record {
 	// create record
 	now := time.Now().Unix()
-	s.buffer = []sdk.Record{
-		{
-			Payload: sdk.Change{
-				Before: nil,
-				After:  sdk.RawData(body),
-			},
-			Metadata:  s.headersToMetadata(resp.Header),
-			Operation: sdk.OperationCreate,
-			Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-			Key:       sdk.RawData(fmt.Sprintf("%v", now)),
+	return sdk.Record{
+		Payload: sdk.Change{
+			Before: nil,
+			After:  sdk.RawData(body),
 		},
+		Metadata:  s.headersToMetadata(resp.Header),
+		Operation: sdk.OperationCreate,
+		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
+		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
 	}
 }
 
@@ -333,5 +341,6 @@ func (s *Source) headersToMetadata(header http.Header) sdk.Metadata {
 	for key, val := range header {
 		meta[key] = strings.Join(val, ",")
 	}
+	meta.SetReadAt(time.Now())
 	return meta
 }

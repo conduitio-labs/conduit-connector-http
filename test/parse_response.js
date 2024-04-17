@@ -5,6 +5,8 @@ function convertToRecord(obj, nextSyncToken) {
     Object.keys(obj).forEach(key => {
         if (key == "id") {
             rec.Key = new RawData(obj[key])
+        } else if (key == "action") {
+            rec.Operation = obj[key]
         } else {
             rec.Payload.After[key] = obj[key]
         }
