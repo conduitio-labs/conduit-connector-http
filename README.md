@@ -1,4 +1,4 @@
-# Conduit Connector for <resource>
+# Conduit Connector for HTTP 
 The HTTP connector is a [Conduit](https://github.com/ConduitIO/conduit) plugin. It provides both, a source
 and a destination HTTP connectors.
 
@@ -17,10 +17,9 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
 
 ### Configuration
 
-- `name`:
+- `url`:
     - description: HTTP URL to send requests to.
     - required: true
-    - default value:
 
 - `method`:
     - description: HTTP method to use in the request, supported methods are (`GET`,`HEAD`,`OPTIONS`).
@@ -30,18 +29,16 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
 - `headers`:
     - description: HTTP headers to use in the request, comma separated list of `:` separated pairs.
     - required: false
-    - default value:
 
 - `params`:
     - description: parameters to use in the request, comma separated list of `:` separated pairs.
     - required: false
-    - default value:
 
 - `pollingperiod`:
     - description: how often the connector will get data from the url, formatted as a `time.Duration`.
     - required: false
     - default value: "5m"
-- 
+
 - `script.getRequestData`:
     - description: The path to a .js file containing the code to prepare the request data. 
         The signature of the function needs to be: 
@@ -52,7 +49,6 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
         - `position` (a byte array) contains the starting position of the connector. 
         The function needs to return a `Request` object.
     - required: false
-    - default: ""
 
 - `script.parseResponse`:
     - description: The path to a .js file containing the code to parse the response. 
@@ -61,7 +57,6 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
         where `bytes` is the original response's raw bytes (i.e. unparsed). 
         The response should be a `Response` object.
     - required: false
-    - default: ""
 
 ## Destination
 The HTTP destination connector pushes data from upstream resources to an HTTP URL via Conduit. the destination adds the

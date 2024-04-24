@@ -74,8 +74,8 @@ func createServer() func() {
 	serverInstance := &http.Server{
 		Addr:         address,
 		Handler:      server,
-		ReadTimeout:  10 * time.Second, // Set your desired read timeout
-		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	// Start the HTTP server
