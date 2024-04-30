@@ -25,6 +25,8 @@ import (
 	"github.com/matryer/is"
 )
 
+var sourceServerRunning bool
+
 func TestTeardownSource_NoOpen(t *testing.T) {
 	con := NewSource()
 	err := con.Teardown(context.Background())
@@ -95,6 +97,10 @@ var ResourceMap = map[string]string{
 }
 
 func createServer() (*http.ServeMux, error) {
+	if sourceServerRunning {
+		return nil, nil
+	}
+	sourceServerRunning = true
 	// Define the server address
 	address := ":8082"
 
