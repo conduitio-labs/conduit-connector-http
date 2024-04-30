@@ -22,71 +22,11 @@ import (
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
-
-func TestTeardownSource_NoOpen(t *testing.T) {
-	con := NewSource()
-	err := con.Teardown(context.Background())
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
-}
-
-func TestSource_Get(t *testing.T) {
-	is := is.New(t)
-	ctx := context.Background()
-	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/resource1",
-		"method": "GET",
-	})
-	is.NoErr(err)
-	err = src.Open(ctx, sdk.Position{})
-	is.NoErr(err)
-	rec, err := src.Read(ctx)
-	is.NoErr(err)
-	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
-}
-
-func TestSource_Options(t *testing.T) {
-	is := is.New(t)
-	ctx := context.Background()
-	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/resource1",
-		"method": "OPTIONS",
-	})
-	is.NoErr(err)
-	err = src.Open(ctx, sdk.Position{})
-	is.NoErr(err)
-	rec, err := src.Read(ctx)
-	is.NoErr(err)
-	meta, ok := rec.Metadata["Allow"]
-	is.True(ok)
-	is.Equal(meta, "GET, HEAD, OPTIONS")
-}
-
-func TestSource_Head(t *testing.T) {
-	is := is.New(t)
-	ctx := context.Background()
-	src := NewSource()
-	_, err := createServer()
-	is.NoErr(err)
-	err = src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/",
-		"method": "HEAD",
-	})
-	is.NoErr(err)
-	err = src.Open(ctx, sdk.Position{})
-	is.NoErr(err)
-	_, err = src.Read(ctx)
-	is.NoErr(err)
-}
 
 // ResourceMap stores resources
 var ResourceMap = map[string]string{
@@ -94,7 +34,9 @@ var ResourceMap = map[string]string{
 	"resource2": "This is resource 2",
 }
 
-func createServer() (*http.ServeMux, error) {
+// createServer creates an HTTP server.
+// Returns a function that shuts down the server.
+func createServer(t *testing.T) {
 	// Define the server address
 	address := ":8082"
 
@@ -132,9 +74,10 @@ func createServer() (*http.ServeMux, error) {
 	serverInstance := &http.Server{
 		Addr:         address,
 		Handler:      server,
-		ReadTimeout:  10 * time.Second, // Set your desired read timeout
-		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
+
 	// Start the HTTP server
 	go func() {
 		err := serverInstance.ListenAndServe()
@@ -142,5 +85,196 @@ func createServer() (*http.ServeMux, error) {
 			fmt.Printf("Server error: %s\n", err)
 		}
 	}()
-	return server, nil
+
+	t.Cleanup(func() {
+		err := serverInstance.Shutdown(context.Background())
+		if err != nil {
+			fmt.Printf("Server error: %s\n", err)
+		}
+	})
+}
+
+func TestTeardownSource_NoOpen(t *testing.T) {
+	con := NewSource()
+	err := con.Teardown(context.Background())
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+}
+
+func TestSource_Get(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	src := NewSource()
+	createServer(t)
+
+	err := src.Configure(ctx, map[string]string{
+		"url":    "http://localhost:8082/resource/resource1",
+		"method": "GET",
+	})
+	is.NoErr(err)
+
+	err = src.Open(ctx, sdk.Position{})
+	is.NoErr(err)
+
+	rec, err := src.Read(ctx)
+	is.NoErr(err)
+	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
+}
+
+func TestSource_Options(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	src := NewSource()
+	createServer(t)
+
+	err := src.Configure(ctx, map[string]string{
+		"url":    "http://localhost:8082/resource/resource1",
+		"method": "OPTIONS",
+	})
+	is.NoErr(err)
+
+	err = src.Open(ctx, sdk.Position{})
+	is.NoErr(err)
+
+	rec, err := src.Read(ctx)
+	is.NoErr(err)
+	meta, ok := rec.Metadata["Allow"]
+	is.True(ok)
+	is.Equal(meta, "GET, HEAD, OPTIONS")
+}
+
+func TestSource_Head(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+	src := NewSource()
+	createServer(t)
+
+	err := src.Configure(ctx, map[string]string{
+		"url":    "http://localhost:8082/resource/",
+		"method": "HEAD",
+	})
+	is.NoErr(err)
+
+	err = src.Open(ctx, sdk.Position{})
+	is.NoErr(err)
+
+	_, err = src.Read(ctx)
+	is.NoErr(err)
+}
+
+func TestSource_ConfigureWithScripts(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":                   "http://localhost:8082/resource/default-resource",
+		"method":                "GET",
+		"script.getRequestData": "./test/get_request_data.js",
+		"script.parseResponse":  "./test/parse_response.js",
+	}
+
+	createServer(t)
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, nil)
+	is.NoErr(err)
+
+	is.True(src.requestBuilder != nil)
+	is.True(src.responseParser != nil)
+}
+
+func TestSource_CustomRequest(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":    "http://localhost:8082/resource/default-resource",
+		"method": "GET",
+	}
+	var previousResp map[string]interface{}
+	pos := sdk.Position("test-position")
+
+	rb := NewMockRequestBuilder(gomock.NewController(t))
+	rb.EXPECT().
+		build(ctx, previousResp, pos).
+		Return(&Request{URL: "http://localhost:8082/resource/resource1"}, nil)
+	src.requestBuilder = rb
+
+	createServer(t)
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, pos)
+	is.NoErr(err)
+
+	rec, err := src.Read(ctx)
+	is.NoErr(err)
+	is.True(string(rec.Payload.After.Bytes()) == "This is resource 1")
+}
+
+func TestSource_ParseResponse(t *testing.T) {
+	is := is.New(t)
+	ctx := context.Background()
+
+	src := NewSource().(*Source)
+	cfg := map[string]string{
+		"url":    "http://localhost:8082/resource/resource1",
+		"method": "GET",
+	}
+	want := sdk.Record{
+		Position:  sdk.Position("pagination-token"),
+		Operation: sdk.OperationUpdate,
+		Metadata:  map[string]string{"foo": "bar"},
+		Key:       sdk.RawData("record-key"),
+		Payload: sdk.Change{
+			After: sdk.StructuredData{
+				"field-a": "value-a",
+			},
+		},
+	}
+
+	rp := NewMockResponseParser(gomock.NewController(t))
+	rp.EXPECT().
+		parse(ctx, []byte("This is resource 1")).
+		Return(
+			&Response{Records: []*jsRecord{{
+				Position:  []byte("pagination-token"),
+				Operation: "update",
+				Metadata:  map[string]string{"foo": "bar"},
+				Key:       sdk.RawData("record-key"),
+				Payload: jsPayload{
+					After: map[string]interface{}{
+						"field-a": "value-a",
+					},
+				},
+			}}},
+			nil,
+		)
+	src.responseParser = rp
+
+	createServer(t)
+
+	err := src.Configure(ctx, cfg)
+	is.NoErr(err)
+
+	err = src.Open(ctx, nil)
+	is.NoErr(err)
+
+	got, err := src.Read(ctx)
+	is.NoErr(err)
+	want.Metadata["Content-Length"] = got.Metadata["Content-Length"]
+	want.Metadata["Content-Type"] = got.Metadata["Content-Type"]
+	want.Metadata["Date"] = got.Metadata["Date"]
+	want.Metadata["opencdc.readAt"] = got.Metadata["opencdc.readAt"]
+
+	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sdk.Record{}))
+	if diff != "" {
+		t.Errorf("mismatch (-want +got): %s", diff)
+	}
 }
