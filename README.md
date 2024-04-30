@@ -66,11 +66,14 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
     </tr>
     <tr>
       <td><code>script.parseResponse</code></td>
-      <td>The path to a .js file containing the code to parse the response.<br/> 
-        The signature of the function needs to be: <br/>
-        <code>function parseResponse(bytes)</code> <br/>
-        where <code>bytes</code> is the original response's raw bytes (i.e. unparsed).<br/> 
-        The response should be a <code>Response</code> object.</td>
+      <td>
+        <p>The path to a .js file containing the code to parse the response.</p>
+        <p>The signature of the function needs to be:</p>
+        <pre><code>function parseResponse(bytes)
+        </code></pre> <br/>
+        <p>where <code>bytes</code> is the original response's raw bytes (i.e. unparsed).</p>
+        <p>The function needs to return a <code>Response</code> object.</p>
+      </td>
       <td>false</td>
       <td></td>
       <td><code>/path/to/get_request_data.js</code> <br/><br/>

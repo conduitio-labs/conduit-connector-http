@@ -36,7 +36,7 @@ var ResourceMap = map[string]string{
 
 // createServer creates an HTTP server.
 // Returns a function that shuts down the server.
-func createServer() func() {
+func createServer(t *testing.T) {
 	// Define the server address
 	address := ":8082"
 
@@ -86,12 +86,12 @@ func createServer() func() {
 		}
 	}()
 
-	return func() {
+	t.Cleanup(func() {
 		err := serverInstance.Shutdown(context.Background())
 		if err != nil {
 			fmt.Printf("Server error: %s\n", err)
 		}
-	}
+	})
 }
 
 func TestTeardownSource_NoOpen(t *testing.T) {
@@ -106,8 +106,7 @@ func TestSource_Get(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
@@ -127,8 +126,7 @@ func TestSource_Options(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
@@ -150,8 +148,7 @@ func TestSource_Head(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 	src := NewSource()
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
 		"url":    "http://localhost:8082/resource/",
@@ -178,8 +175,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 		"script.parseResponse":  "./test/parse_response.js",
 	}
 
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, cfg)
 	is.NoErr(err)
@@ -209,8 +205,7 @@ func TestSource_CustomRequest(t *testing.T) {
 		Return(&Request{URL: "http://localhost:8082/resource/resource1"}, nil)
 	src.requestBuilder = rb
 
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, cfg)
 	is.NoErr(err)
@@ -263,8 +258,7 @@ func TestSource_ParseResponse(t *testing.T) {
 		)
 	src.responseParser = rp
 
-	srvShutdown := createServer()
-	defer srvShutdown()
+	createServer(t)
 
 	err := src.Configure(ctx, cfg)
 	is.NoErr(err)

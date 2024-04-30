@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"golang.org/x/exp/maps"
 	"golang.org/x/time/rate"
 )
 
