@@ -239,8 +239,8 @@ func (s *Source) fillBuffer(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 
-	// check response status
-	if resp.StatusCode != http.StatusOK {
+	// NB: Conduit's built-in HTTP processor parses responses in the same way
+	if resp.StatusCode >= 300 {
 		return s.buildError(resp)
 	}
 
