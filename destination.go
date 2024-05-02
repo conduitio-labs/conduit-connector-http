@@ -69,10 +69,6 @@ func (d *Destination) Configure(ctx context.Context, cfg map[string]string) erro
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
 	}
-	err = d.config.setConfigParams()
-	if err != nil {
-		return err
-	}
 	if strings.Contains(d.config.URL, "{{") {
 		// create URL template
 		d.urlTmpl, err = template.New("").Funcs(sprig.FuncMap()).Parse(d.config.URL)

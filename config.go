@@ -24,22 +24,8 @@ import (
 type Config struct {
 	// Http headers to use in the request, comma separated list of : separated pairs
 	Headers []string
-	// parameters to use in the request, comma separated list of : separated pairs
-	Params []string
-
-	paramValues map[string]string
-}
-
-func (s *Config) setConfigParams() error {
-	s.paramValues = make(map[string]string)
-	for _, param := range s.Params {
-		keyValue := strings.Split(param, ":")
-		if len(keyValue) != 2 {
-			return fmt.Errorf("invalid %q format", "params")
-		}
-		s.paramValues[keyValue[0]] = keyValue[1]
-	}
-	return nil
+	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
+	Params map[string]string
 }
 
 func (s *Config) addParamsToURL(origURL string) (string, error) {
@@ -50,7 +36,7 @@ func (s *Config) addParamsToURL(origURL string) (string, error) {
 	// Parse existing query parameters
 	existingParams := parsedURL.Query()
 	// Add config params
-	for key, val := range s.paramValues {
+	for key, val := range s.Params {
 		existingParams.Add(key, val)
 	}
 	// Update query parameters in the URL struct

@@ -23,15 +23,15 @@ func (DestinationConfig) Parameters() map[string]sdk.Parameter {
 				sdk.ValidationInclusion{List: []string{"POST", "PUT", "DELETE", "PATCH"}},
 			},
 		},
-		"params": {
+		"params.*": {
 			Default:     "",
-			Description: "parameters to use in the request, comma separated list of : separated pairs",
+			Description: "parameters to use in the request, use params.* as the config key and specify its value, ex: set \"params.id\" as \"1\".",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{},
 		},
 		"url": {
 			Default:     "",
-			Description: "Http url to send requests to",
+			Description: "url is a Go template expression for the url used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template). The value provided to the template is [sdk.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81), so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/) to make it easier to write templates.",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{
 				sdk.ValidationRequired{},

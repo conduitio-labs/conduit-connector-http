@@ -23,9 +23,9 @@ func (SourceConfig) Parameters() map[string]sdk.Parameter {
 				sdk.ValidationInclusion{List: []string{"GET", "HEAD", "OPTIONS"}},
 			},
 		},
-		"params": {
+		"params.*": {
 			Default:     "",
-			Description: "parameters to use in the request, comma separated list of : separated pairs",
+			Description: "parameters to use in the request, use params.* as the config key and specify its value, ex: set \"params.id\" as \"1\".",
 			Type:        sdk.ParameterTypeString,
 			Validations: []sdk.Validation{},
 		},

@@ -25,11 +25,12 @@ func TestConfig_URL(t *testing.T) {
 	is := is.New(t)
 	URL := "http://localhost:8082/resource"
 	config := Config{
-		Params: []string{"name:resource1", "id:1"},
+		Params: map[string]string{
+			"name": "resource1",
+			"id":   "1",
+		},
 	}
 	want := "http://localhost:8082/resource?id=1&name=resource1"
-	err := config.setConfigParams()
-	is.NoErr(err)
 	got, _ := config.addParamsToURL(URL)
 	is.True(got == want)
 }
@@ -39,11 +40,11 @@ func TestConfig_URLParams(t *testing.T) {
 	// url already has a parameter
 	URL := "http://localhost:8082/resource?name=resource1"
 	config := Config{
-		Params: []string{"id:1"},
+		Params: map[string]string{
+			"id": "1",
+		},
 	}
 	want := "http://localhost:8082/resource?id=1&name=resource1"
-	err := config.setConfigParams()
-	is.NoErr(err)
 	got, err := config.addParamsToURL(URL)
 	is.NoErr(err)
 	is.True(got == want)
@@ -53,11 +54,12 @@ func TestConfig_EmptyParams(t *testing.T) {
 	is := is.New(t)
 	URL := "http://localhost:8082/resource?"
 	config := Config{
-		Params: []string{"name:resource1", "id:1"},
+		Params: map[string]string{
+			"name": "resource1",
+			"id":   "1",
+		},
 	}
 	want := "http://localhost:8082/resource?id=1&name=resource1"
-	err := config.setConfigParams()
-	is.NoErr(err)
 	got, err := config.addParamsToURL(URL)
 	is.NoErr(err)
 	is.True(got == want)

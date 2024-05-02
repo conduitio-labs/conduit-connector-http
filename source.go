@@ -62,10 +62,6 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
-	err = s.config.setConfigParams()
-	if err != nil {
-		return err
-	}
 	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
 	if err != nil {
 		return err
