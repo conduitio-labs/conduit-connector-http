@@ -155,7 +155,7 @@ func (s *Source) testConnection(ctx context.Context) error {
 		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= 300 {
 		return fmt.Errorf("invalid response status code: (%d) %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
