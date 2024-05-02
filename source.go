@@ -111,14 +111,14 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	}
 
 	if s.config.GetRequestDataScript != "" {
-		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, config.GetRequestDataScript)
+		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, s.config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}
 	}
 
 	if s.config.ParseResponseScript != "" {
-		s.responseParser, err = newJSResponseParser(ctx, config.ParseResponseScript)
+		s.responseParser, err = newJSResponseParser(ctx, s.config.ParseResponseScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", parseResponseFn, err)
 		}

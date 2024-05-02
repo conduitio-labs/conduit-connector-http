@@ -94,8 +94,6 @@ func createServer(t *testing.T) {
 	})
 }
 
-var sourceServerRunning bool
-
 func TestTeardownSource_NoOpen(t *testing.T) {
 	con := NewSource()
 	err := con.Teardown(context.Background())
