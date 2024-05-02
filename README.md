@@ -1,4 +1,4 @@
-# Conduit Connector for <resource>
+# Conduit Connector for HTTP
 The HTTP connector is a [Conduit](https://github.com/ConduitIO/conduit) plugin. It provides both, a source
 and a destination HTTP connectors.
 
@@ -51,11 +51,11 @@ Note: when using the `OPTIONS` method, the resulted options will be added to the
       <td><code>Authorization:Bearer TOKEN_VALUE,Content-Type:application/xml</code></td>
     </tr>
     <tr>
-      <td><code>params</code></td>
-      <td>parameters to use in the request, comma separated list of <code>:</code> separated pairs.</td>
+      <td><code>params.*</code></td>
+      <td>parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".</td>
       <td>false</td>
       <td></td>
-      <td><code>"query:foobar,language:english</code></td>
+      <td><code>params.query="foobar"</code></td>
     </tr>
     <tr>
       <td><code>pollingperiod</code></td>
@@ -115,10 +115,10 @@ of that or manipulate the field in any way, please check our [Builtin Processors
 
 ### Configuration
 
-| name      | description                                                                               | required   | default value |
-|-----------|-------------------------------------------------------------------------------------------|------------|---------------|
-| `url`     | HTTP URL to send requests to.                                                             | true       |               |
-| `method`  | HTTP method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`). | false      | `POST`        |
-| `headers` | HTTP headers to use in the request, comma separated list of : separated pairs.            | false      |               |
-| `params`  | parameters to use in the request, comma separated list of : separated pairs.              | false      |               |
+| name       | description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | required   | default value |
+|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|---------------|
+| `url`      | Is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template). The value provided to the template is [sdk.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81), so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/) to make it easier to write templates. | true       |               |
+| `method`   | Http method to use in the request, supported methods are (`POST`,`PUT`,`DELETE`,`PATCH`).                                                                                                                                                                                                                                                                                                                                                                                                                                      | false      | `POST`        |
+| `headers`  | Http headers to use in the request, comma separated list of : separated pairs.                                                                                                                                                                                                                                                                                                                                                                                                                                                 | false      |               |
+| `params.*` | parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".                                                                                                                                                                                                                                                                                                                                                                                                            | false      |               |
 

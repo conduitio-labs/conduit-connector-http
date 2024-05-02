@@ -63,6 +63,8 @@ type Source struct {
 
 type SourceConfig struct {
 	Config
+	// Http url to send requests to
+	URL string `json:"url" validate:"required"`
 	// how often the connector will get data from the url
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
 	// Http method to use in the request
@@ -95,37 +97,32 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	sdk.Logger(ctx).Info().Msg("configuring source...")
 
-	var config SourceConfig
-	err := sdk.Util.ParseConfig(cfg, &config)
+	err := sdk.Util.ParseConfig(cfg, &s.config)
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
-
-	s.config.URL, err = s.config.addParamsToURL()
+	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
 	if err != nil {
 		return err
 	}
-
-	s.header, err = config.Config.getHeader()
+	s.header, err = s.config.Config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
 	}
 
-	if config.GetRequestDataScript != "" {
-		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, config.GetRequestDataScript)
+	if s.config.GetRequestDataScript != "" {
+		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, s.config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}
 	}
 
-	if config.ParseResponseScript != "" {
-		s.responseParser, err = newJSResponseParser(ctx, config.ParseResponseScript)
+	if s.config.ParseResponseScript != "" {
+		s.responseParser, err = newJSResponseParser(ctx, s.config.ParseResponseScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", parseResponseFn, err)
 		}
 	}
-
-	s.config = config
 
 	return nil
 }
@@ -158,14 +155,10 @@ func (s *Source) testConnection(ctx context.Context) error {
 		return fmt.Errorf("error pinging URL %q: %w", s.config.URL, err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
-		}
-		return fmt.Errorf("authorization failed, %s: %s", http.StatusText(http.StatusUnauthorized), string(body))
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("invalid response status code: (%d) %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
+	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)
 
 	return nil
 }

@@ -88,6 +88,33 @@ func TestDestination_Delete(t *testing.T) {
 	is.True(!ok)
 }
 
+func TestDestination_DynamicURL(t *testing.T) {
+	is := is.New(t)
+	runServer()
+	url := "http://localhost:8081/resource/{{.Payload.After.id}}"
+	ctx := context.Background()
+	dest := NewDestination()
+	err := dest.Configure(ctx, map[string]string{
+		"url":    url,
+		"method": "DELETE",
+	})
+	is.NoErr(err)
+	rec := sdk.Record{
+		Payload: sdk.Change{
+			After: sdk.StructuredData{
+				"id": "3",
+			},
+		},
+	}
+	err = dest.Open(ctx)
+	is.NoErr(err)
+	_, err = dest.Write(ctx, []sdk.Record{rec})
+	is.NoErr(err)
+	_, ok := resources["3"]
+	// resource was deleted
+	is.True(!ok)
+}
+
 // resource represents a dummy resource
 type resource struct {
 	ID   string `json:"id"`
@@ -97,6 +124,7 @@ type resource struct {
 // init with one resource
 var resources = map[string]resource{
 	"1": {ID: "1", Name: "Item 1"},
+	"3": {ID: "3", Name: "Item 3"},
 }
 
 func runServer() {
@@ -125,9 +153,14 @@ func runServer() {
 
 // handleResource handles POST requests to create a new resource
 func handleResource(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPost && r.Method != http.MethodHead {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	if r.Method == http.MethodHead {
+		// Respond with headers only
+		w.WriteHeader(http.StatusOK)
 	}
 
 	var newResource resource
@@ -166,6 +199,8 @@ func handleSingleResource(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		resources[id] = newResource
+		w.WriteHeader(http.StatusOK)
+	case http.MethodHead:
 		w.WriteHeader(http.StatusOK)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

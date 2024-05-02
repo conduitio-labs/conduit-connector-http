@@ -22,29 +22,22 @@ import (
 )
 
 type Config struct {
-	// Http url to send requests to
-	URL string `json:"url" validate:"required"`
 	// Http headers to use in the request, comma separated list of : separated pairs
 	Headers []string
-	// parameters to use in the request, comma separated list of : separated pairs
-	Params []string
+	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
+	Params map[string]string
 }
 
-func (s Config) addParamsToURL() (string, error) {
-	parsedURL, err := url.Parse(s.URL)
+func (s *Config) addParamsToURL(origURL string) (string, error) {
+	parsedURL, err := url.Parse(origURL)
 	if err != nil {
-		return s.URL, fmt.Errorf("error parsing URL: %w", err)
+		return "", fmt.Errorf("error parsing URL: %w", err)
 	}
 	// Parse existing query parameters
 	existingParams := parsedURL.Query()
-	for _, param := range s.Params {
-		keyValue := strings.Split(param, ":")
-		if len(keyValue) != 2 {
-			return s.URL, fmt.Errorf("invalid %q format", "params")
-		}
-		key := keyValue[0]
-		value := keyValue[1]
-		existingParams.Add(key, value)
+	// Add config params
+	for key, val := range s.Params {
+		existingParams.Add(key, val)
 	}
 	// Update query parameters in the URL struct
 	parsedURL.RawQuery = existingParams.Encode()
@@ -52,7 +45,7 @@ func (s Config) addParamsToURL() (string, error) {
 	return parsedURL.String(), nil
 }
 
-func (s Config) getHeader() (http.Header, error) {
+func (s *Config) getHeader() (http.Header, error) {
 	// create a new empty header
 	header := http.Header{}
 
