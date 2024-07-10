@@ -1,6 +1,6 @@
 module github.com/conduitio-labs/conduit-connector-discord
 
-go 1.20
+go 1.21
 
 require github.com/conduitio/conduit-connector-sdk v0.6.0
 
