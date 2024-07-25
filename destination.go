@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"io"
 	"net/http"
 
@@ -45,14 +47,14 @@ func NewDestination() sdk.Destination {
 	return sdk.DestinationWithMiddleware(&Destination{}, sdk.DefaultDestinationMiddleware()...)
 }
 
-func (d *Destination) Parameters() map[string]sdk.Parameter {
+func (d *Destination) Parameters() config.Parameters {
 	return d.config.Parameters()
 }
 
-func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
+func (d *Destination) Configure(ctx context.Context, cfg config.Config) error {
 	sdk.Logger(ctx).Info().Msg("Configuring Destination...")
 	var config DestinationConfig
-	err := sdk.Util.ParseConfig(cfg, &config)
+	err := sdk.Util.ParseConfig(ctx, cfg, &config, d.Parameters())
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -95,7 +97,7 @@ func (d *Destination) Open(ctx context.Context) error {
 	return nil
 }
 
-func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int, error) {
 	for i, rec := range records {
 		err := d.sendRequest(ctx, rec)
 		if err != nil {
@@ -105,7 +107,7 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 	return 0, nil
 }
 
-func (d *Destination) sendRequest(ctx context.Context, record sdk.Record) error {
+func (d *Destination) sendRequest(ctx context.Context, record opencdc.Record) error {
 	var body io.Reader
 	if record.Payload.After != nil {
 		body = bytes.NewReader(record.Payload.After.Bytes())
