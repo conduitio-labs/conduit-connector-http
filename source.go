@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"golang.org/x/time/rate"
 )
@@ -36,7 +38,7 @@ type requestBuilder interface {
 	build(
 		ctx context.Context,
 		previousResponseData map[string]any,
-		position sdk.Position,
+		position opencdc.Position,
 	) (*Request, error)
 }
 
@@ -54,8 +56,8 @@ type Source struct {
 	limiter *rate.Limiter
 
 	lastResponseData map[string]any
-	buffer           []sdk.Record
-	lastPosition     sdk.Position
+	buffer           []opencdc.Record
+	lastPosition     opencdc.Position
 
 	requestBuilder requestBuilder
 	responseParser responseParser
@@ -90,14 +92,14 @@ func NewSource() sdk.Source {
 	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware()...)
 }
 
-func (s *Source) Parameters() map[string]sdk.Parameter {
+func (s *Source) Parameters() config.Parameters {
 	return s.config.Parameters()
 }
 
-func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
+func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 	sdk.Logger(ctx).Info().Msg("configuring source...")
 
-	err := sdk.Util.ParseConfig(cfg, &s.config)
+	err := sdk.Util.ParseConfig(ctx, cfg, &s.config, s.config.Parameters())
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -127,7 +129,7 @@ func (s *Source) Configure(ctx context.Context, cfg map[string]string) error {
 	return nil
 }
 
-func (s *Source) Open(ctx context.Context, pos sdk.Position) error {
+func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 	sdk.Logger(ctx).Info().Msg("opening source")
 	// create client
 	s.client = &http.Client{}
@@ -163,29 +165,29 @@ func (s *Source) testConnection(ctx context.Context) error {
 	return nil
 }
 
-func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
+func (s *Source) Read(ctx context.Context) (opencdc.Record, error) {
 	rec, err := s.getRecord(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("error getting data: %w", err)
+		return opencdc.Record{}, fmt.Errorf("error getting data: %w", err)
 	}
 	return rec, nil
 }
 
-func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
+func (s *Source) getRecord(ctx context.Context) (opencdc.Record, error) {
 	if len(s.buffer) == 0 {
 		err := s.limiter.Wait(ctx)
 		if err != nil {
-			return sdk.Record{}, err
+			return opencdc.Record{}, err
 		}
 
 		err = s.fillBuffer(ctx)
 		if err != nil {
-			return sdk.Record{}, err
+			return opencdc.Record{}, err
 		}
 	}
 
 	if len(s.buffer) == 0 {
-		return sdk.Record{}, sdk.ErrBackoffRetry
+		return opencdc.Record{}, sdk.ErrBackoffRetry
 	}
 
 	sdk.Logger(ctx).Trace().Msg("returning record")
@@ -197,7 +199,7 @@ func (s *Source) getRecord(ctx context.Context) (sdk.Record, error) {
 	return rec, nil
 }
 
-func (s *Source) Ack(ctx context.Context, position sdk.Position) error {
+func (s *Source) Ack(ctx context.Context, position opencdc.Position) error {
 	sdk.Logger(ctx).Debug().Str("position", string(position)).Msg("got ack")
 	return nil
 }
@@ -292,7 +294,7 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 	for _, jsRec := range respData.Records {
 		rec, err := s.toSDKRecord(jsRec, resp)
 		if err != nil {
-			return fmt.Errorf("failed converting JS record to sdk.Record: %w", err)
+			return fmt.Errorf("failed converting JS record to opencdc.Record: %w", err)
 		}
 		s.buffer = append(s.buffer, rec)
 	}
@@ -301,54 +303,54 @@ func (s *Source) parseResponse(ctx context.Context, resp *http.Response) error {
 	return nil
 }
 
-func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) (sdk.Record, error) {
-	toSDKData := func(d interface{}) sdk.Data {
+func (s *Source) toSDKRecord(jsRec *jsRecord, resp *http.Response) (opencdc.Record, error) {
+	toSDKData := func(d interface{}) opencdc.Data {
 		switch v := d.(type) {
-		case sdk.RawData:
+		case opencdc.RawData:
 			return v
 		case map[string]interface{}:
-			return sdk.StructuredData(v)
+			return opencdc.StructuredData(v)
 		}
 		return nil
 	}
 
-	var op sdk.Operation
+	var op opencdc.Operation
 	err := op.UnmarshalText([]byte(jsRec.Operation))
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("could not unmarshal operation: %w", err)
+		return opencdc.Record{}, fmt.Errorf("could not unmarshal operation: %w", err)
 	}
 
 	meta := s.headersToMetadata(resp.Header)
 	maps.Copy(meta, jsRec.Metadata)
 
-	return sdk.Record{
+	return opencdc.Record{
 		Position:  jsRec.Position,
 		Operation: op,
 		Metadata:  meta,
 		Key:       toSDKData(jsRec.Key),
-		Payload: sdk.Change{
+		Payload: opencdc.Change{
 			Before: toSDKData(jsRec.Payload.Before),
 			After:  toSDKData(jsRec.Payload.After),
 		},
 	}, nil
 }
 
-func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) sdk.Record {
+func (s *Source) parseAsSingleRecord(resp *http.Response, body []byte) opencdc.Record {
 	now := time.Now().Unix()
-	return sdk.Record{
-		Payload: sdk.Change{
+	return opencdc.Record{
+		Payload: opencdc.Change{
 			Before: nil,
-			After:  sdk.RawData(body),
+			After:  opencdc.RawData(body),
 		},
 		Metadata:  s.headersToMetadata(resp.Header),
-		Operation: sdk.OperationCreate,
-		Position:  sdk.Position(fmt.Sprintf("unix-%v", now)),
-		Key:       sdk.RawData(fmt.Sprintf("%v", now)),
+		Operation: opencdc.OperationCreate,
+		Position:  opencdc.Position(fmt.Sprintf("unix-%v", now)),
+		Key:       opencdc.RawData(fmt.Sprintf("%v", now)),
 	}
 }
 
-func (s *Source) headersToMetadata(header http.Header) sdk.Metadata {
-	meta := sdk.Metadata{}
+func (s *Source) headersToMetadata(header http.Header) opencdc.Metadata {
+	meta := opencdc.Metadata{}
 	for key, val := range header {
 		meta[key] = strings.Join(val, ",")
 	}

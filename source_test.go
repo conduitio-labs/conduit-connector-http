@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/matryer/is"
@@ -114,7 +113,7 @@ func TestSource_Get(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	rec, err := src.Read(ctx)
@@ -134,7 +133,7 @@ func TestSource_Options(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	rec, err := src.Read(ctx)
@@ -156,7 +155,7 @@ func TestSource_Head(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	_, err = src.Read(ctx)
@@ -197,7 +196,7 @@ func TestSource_CustomRequest(t *testing.T) {
 		"method": "GET",
 	}
 	var previousResp map[string]interface{}
-	pos := sdk.Position("test-position")
+	pos := opencdc.Position("test-position")
 
 	rb := NewMockRequestBuilder(gomock.NewController(t))
 	rb.EXPECT().
@@ -227,13 +226,13 @@ func TestSource_ParseResponse(t *testing.T) {
 		"url":    "http://localhost:8082/resource/resource1",
 		"method": "GET",
 	}
-	want := sdk.Record{
-		Position:  sdk.Position("pagination-token"),
-		Operation: sdk.OperationUpdate,
+	want := opencdc.Record{
+		Position:  opencdc.Position("pagination-token"),
+		Operation: opencdc.OperationUpdate,
 		Metadata:  map[string]string{"foo": "bar"},
-		Key:       sdk.RawData("record-key"),
-		Payload: sdk.Change{
-			After: sdk.StructuredData{
+		Key:       opencdc.RawData("record-key"),
+		Payload: opencdc.Change{
+			After: opencdc.StructuredData{
 				"field-a": "value-a",
 			},
 		},
@@ -247,7 +246,7 @@ func TestSource_ParseResponse(t *testing.T) {
 				Position:  []byte("pagination-token"),
 				Operation: "update",
 				Metadata:  map[string]string{"foo": "bar"},
-				Key:       sdk.RawData("record-key"),
+				Key:       opencdc.RawData("record-key"),
 				Payload: jsPayload{
 					After: map[string]interface{}{
 						"field-a": "value-a",
@@ -273,7 +272,7 @@ func TestSource_ParseResponse(t *testing.T) {
 	want.Metadata["Date"] = got.Metadata["Date"]
 	want.Metadata["opencdc.readAt"] = got.Metadata["opencdc.readAt"]
 
-	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sdk.Record{}))
+	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(opencdc.Record{}))
 	if diff != "" {
 		t.Errorf("mismatch (-want +got): %s", diff)
 	}

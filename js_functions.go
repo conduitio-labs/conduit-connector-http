@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/require"
@@ -40,8 +41,8 @@ type Response struct {
 	Records    []*jsRecord
 }
 
-// jsRecord is an intermediary representation of sdk.Record that is passed to
-// the JavaScript transform. We use this because using sdk.Record would not
+// jsRecord is an intermediary representation of opencdc.Record that is passed to
+// the JavaScript transform. We use this because using opencdc.Record would not
 // allow us to modify or access certain data (e.g. metadata or structured data).
 type jsRecord struct {
 	Position  []byte
@@ -109,7 +110,7 @@ func newJSRequestBuilder(ctx context.Context, cfg map[string]string, srcPath str
 func (r *jsRequestBuilder) build(
 	ctx context.Context,
 	previousResponseData map[string]any,
-	position sdk.Position,
+	position opencdc.Position,
 ) (*Request, error) {
 	err := r.gojaCtx.addLogger(sdk.Logger(ctx))
 	if err != nil {
@@ -215,9 +216,9 @@ func newFunction(runtime *goja.Runtime, src string, fnName string) (goja.Callabl
 func newRawData(runtime *goja.Runtime) func(goja.ConstructorCall) *goja.Object {
 	return func(call goja.ConstructorCall) *goja.Object {
 		// Make it possible to construct a RawData object from a string
-		var r sdk.RawData
+		var r opencdc.RawData
 		if len(call.Arguments) > 0 {
-			r = sdk.RawData(call.Argument(0).String())
+			r = opencdc.RawData(call.Argument(0).String())
 		}
 		// We need to return a pointer to make the returned object mutable.
 		return runtime.ToValue(r).ToObject(runtime)

@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 )
 
@@ -55,12 +54,12 @@ func TestDestination_Post(t *testing.T) {
 	is.NoErr(err)
 	err = dest.Open(ctx)
 	is.NoErr(err)
-	rec := sdk.Record{
-		Payload: sdk.Change{
-			After: sdk.RawData(`{"id": "2", "name": "Item 2"}`),
+	rec := opencdc.Record{
+		Payload: opencdc.Change{
+			After: opencdc.RawData(`{"id": "2", "name": "Item 2"}`),
 		},
 	}
-	_, err = dest.Write(ctx, []sdk.Record{rec})
+	_, err = dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
 	_, ok := resources["2"]
 	is.True(ok)
@@ -80,8 +79,8 @@ func TestDestination_Delete(t *testing.T) {
 	is.NoErr(err)
 	err = dest.Open(ctx)
 	is.NoErr(err)
-	rec := sdk.Record{}
-	_, err = dest.Write(ctx, []sdk.Record{rec})
+	rec := opencdc.Record{}
+	_, err = dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
 	_, ok := resources["1"]
 	// resource was deleted
@@ -99,16 +98,16 @@ func TestDestination_DynamicURL(t *testing.T) {
 		"method": "DELETE",
 	})
 	is.NoErr(err)
-	rec := sdk.Record{
-		Payload: sdk.Change{
-			After: sdk.StructuredData{
+	rec := opencdc.Record{
+		Payload: opencdc.Change{
+			After: opencdc.StructuredData{
 				"id": "3",
 			},
 		},
 	}
 	err = dest.Open(ctx)
 	is.NoErr(err)
-	_, err = dest.Write(ctx, []sdk.Record{rec})
+	_, err = dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
 	_, ok := resources["3"]
 	// resource was deleted

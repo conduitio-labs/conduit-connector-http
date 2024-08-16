@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	opencdc "github.com/conduitio/conduit-commons/opencdc"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,7 +41,7 @@ func (m *MockRequestBuilder) EXPECT() *MockRequestBuilderMockRecorder {
 }
 
 // build mocks base method.
-func (m *MockRequestBuilder) build(ctx context.Context, previousResponseData map[string]any, position sdk.Position) (*Request, error) {
+func (m *MockRequestBuilder) build(ctx context.Context, previousResponseData map[string]any, position opencdc.Position) (*Request, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "build", ctx, previousResponseData, position)
 	ret0, _ := ret[0].(*Request)
