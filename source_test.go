@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/matryer/is"
@@ -114,7 +114,7 @@ func TestSource_Get(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	rec, err := src.Read(ctx)
@@ -125,7 +125,7 @@ func TestSource_Get(t *testing.T) {
 func TestSource_Options(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := NewSource()
+	src := Source{}
 	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
@@ -134,7 +134,7 @@ func TestSource_Options(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	rec, err := src.Read(ctx)
@@ -147,7 +147,7 @@ func TestSource_Options(t *testing.T) {
 func TestSource_Head(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := NewSource()
+	src := Source{}
 	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
@@ -156,7 +156,7 @@ func TestSource_Head(t *testing.T) {
 	})
 	is.NoErr(err)
 
-	err = src.Open(ctx, sdk.Position{})
+	err = src.Open(ctx, opencdc.Position{})
 	is.NoErr(err)
 
 	_, err = src.Read(ctx)
@@ -167,7 +167,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":                   "http://localhost:8082/resource/default-resource",
 		"method":                "GET",
@@ -181,6 +181,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is.NoErr(err)
 
 	err = src.Open(ctx, nil)
+	src.Parameters()
 	is.NoErr(err)
 
 	is.True(src.requestBuilder != nil)
@@ -191,13 +192,13 @@ func TestSource_CustomRequest(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":    "http://localhost:8082/resource/default-resource",
 		"method": "GET",
 	}
 	var previousResp map[string]interface{}
-	pos := sdk.Position("test-position")
+	pos := opencdc.Position("test-position")
 
 	rb := NewMockRequestBuilder(gomock.NewController(t))
 	rb.EXPECT().
@@ -222,18 +223,18 @@ func TestSource_ParseResponse(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
 		"method": "GET",
 	}
-	want := sdk.Record{
-		Position:  sdk.Position("pagination-token"),
-		Operation: sdk.OperationUpdate,
+	want := opencdc.Record{
+		Position:  opencdc.Position("pagination-token"),
+		Operation: opencdc.OperationUpdate,
 		Metadata:  map[string]string{"foo": "bar"},
-		Key:       sdk.RawData("record-key"),
-		Payload: sdk.Change{
-			After: sdk.StructuredData{
+		Key:       opencdc.RawData("record-key"),
+		Payload: opencdc.Change{
+			After: opencdc.StructuredData{
 				"field-a": "value-a",
 			},
 		},
@@ -247,7 +248,7 @@ func TestSource_ParseResponse(t *testing.T) {
 				Position:  []byte("pagination-token"),
 				Operation: "update",
 				Metadata:  map[string]string{"foo": "bar"},
-				Key:       sdk.RawData("record-key"),
+				Key:       opencdc.RawData("record-key"),
 				Payload: jsPayload{
 					After: map[string]interface{}{
 						"field-a": "value-a",
@@ -273,7 +274,7 @@ func TestSource_ParseResponse(t *testing.T) {
 	want.Metadata["Date"] = got.Metadata["Date"]
 	want.Metadata["opencdc.readAt"] = got.Metadata["opencdc.readAt"]
 
-	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(sdk.Record{}))
+	diff := cmp.Diff(want, got, cmpopts.IgnoreUnexported(opencdc.Record{}))
 	if diff != "" {
 		t.Errorf("mismatch (-want +got): %s", diff)
 	}

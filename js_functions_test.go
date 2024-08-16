@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/google/go-cmp/cmp"
 	"github.com/matryer/is"
 	"github.com/rs/zerolog"
@@ -42,7 +42,7 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 		map[string]any{
 			"nextPageToken": "abc",
 		},
-		sdk.Position(""),
+		opencdc.Position(""),
 	)
 	is.NoErr(err)
 	is.Equal("http://example.com/?pageToken=abc&pageSize=2", data.URL)
@@ -80,7 +80,7 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 		[]*jsRecord{
 			{
 				Position:  []byte("xyz"),
-				Key:       sdk.RawData("id-a"),
+				Key:       opencdc.RawData("id-a"),
 				Metadata:  make(map[string]string),
 				Operation: "update",
 				Payload: jsPayload{
@@ -89,7 +89,7 @@ func TestSourceExtension_ParseResponse(t *testing.T) {
 			},
 			{
 				Position: []byte("xyz"),
-				Key:      sdk.RawData("id-b"),
+				Key:      opencdc.RawData("id-b"),
 				Metadata: make(map[string]string),
 				Payload: jsPayload{
 					After: map[string]any{

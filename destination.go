@@ -27,6 +27,8 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
@@ -42,7 +44,7 @@ type Destination struct {
 type DestinationConfig struct {
 	Config
 	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
-	// The value provided to the template is [sdk.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81),
+	// The value provided to the template is [opencdc.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81),
 	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
 	// to make it easier to write templates.
 	URL string `json:"url" validate:"required"`
@@ -54,13 +56,13 @@ func NewDestination() sdk.Destination {
 	return sdk.DestinationWithMiddleware(&Destination{}, sdk.DefaultDestinationMiddleware()...)
 }
 
-func (d *Destination) Parameters() map[string]sdk.Parameter {
+func (d *Destination) Parameters() config.Parameters {
 	return d.config.Parameters()
 }
 
-func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
+func (d *Destination) Configure(ctx context.Context, cfg config.Config) error {
 	sdk.Logger(ctx).Info().Msg("Configuring Destination...")
-	err := sdk.Util.ParseConfig(cfg, &d.config)
+	err := sdk.Util.ParseConfig(ctx, cfg, &d.config, d.config.Parameters())
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
@@ -101,7 +103,7 @@ func (d *Destination) Open(ctx context.Context) error {
 	return nil
 }
 
-func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int, error) {
 	for i, rec := range records {
 		err := d.sendRequest(ctx, rec)
 		if err != nil {
@@ -110,7 +112,7 @@ func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, err
 	}
 	return 0, nil
 }
-func (d *Destination) getURL(rec sdk.Record) (string, error) {
+func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	URL, err := d.EvaluateURL(rec)
 	if err != nil {
 		return "", err
@@ -121,7 +123,7 @@ func (d *Destination) getURL(rec sdk.Record) (string, error) {
 	}
 	return URL, nil
 }
-func (d *Destination) EvaluateURL(rec sdk.Record) (string, error) {
+func (d *Destination) EvaluateURL(rec opencdc.Record) (string, error) {
 	if d.urlTmpl == nil {
 		return d.config.URL, nil
 	}
@@ -142,7 +144,7 @@ func (d *Destination) EvaluateURL(rec sdk.Record) (string, error) {
 	return u.String(), nil
 }
 
-func (d *Destination) sendRequest(ctx context.Context, record sdk.Record) error {
+func (d *Destination) sendRequest(ctx context.Context, record opencdc.Record) error {
 	var body io.Reader
 	if record.Payload.After != nil {
 		body = bytes.NewReader(record.Payload.After.Bytes())
