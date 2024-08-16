@@ -125,7 +125,7 @@ func TestSource_Get(t *testing.T) {
 func TestSource_Options(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := NewSource()
+	src := Source{}
 	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
@@ -147,7 +147,7 @@ func TestSource_Options(t *testing.T) {
 func TestSource_Head(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := NewSource()
+	src := Source{}
 	createServer(t)
 
 	err := src.Configure(ctx, map[string]string{
@@ -167,7 +167,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":                   "http://localhost:8082/resource/default-resource",
 		"method":                "GET",
@@ -181,6 +181,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is.NoErr(err)
 
 	err = src.Open(ctx, nil)
+	src.Parameters()
 	is.NoErr(err)
 
 	is.True(src.requestBuilder != nil)
@@ -191,7 +192,7 @@ func TestSource_CustomRequest(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":    "http://localhost:8082/resource/default-resource",
 		"method": "GET",
@@ -222,7 +223,7 @@ func TestSource_ParseResponse(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource().(*Source)
+	src := Source{}
 	cfg := map[string]string{
 		"url":    "http://localhost:8082/resource/resource1",
 		"method": "GET",
