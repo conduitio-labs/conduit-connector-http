@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/conduitio/conduit-commons/opencdc"
 	"github.com/google/go-cmp/cmp"
 	"github.com/matryer/is"
 	"github.com/rs/zerolog"
