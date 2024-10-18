@@ -12,7 +12,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/matryer/is v1.4.1
 	github.com/rs/zerolog v1.33.0
-	go.uber.org/mock v0.4.0
+	go.uber.org/mock v0.5.0
 	golang.org/x/time v0.7.0
 )
 
