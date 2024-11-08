@@ -13,7 +13,7 @@ require (
 	github.com/matryer/is v1.4.1
 	github.com/rs/zerolog v1.33.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/time v0.7.0
+	golang.org/x/time v0.8.0
 )
 
 require (
