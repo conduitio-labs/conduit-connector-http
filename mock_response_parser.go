@@ -21,6 +21,7 @@ import (
 type MockrequestBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockrequestBuilderMockRecorder
+	isgomock struct{}
 }
 
 // MockrequestBuilderMockRecorder is the mock recorder for MockrequestBuilder.
@@ -59,6 +60,7 @@ func (mr *MockrequestBuilderMockRecorder) build(ctx, previousResponseData, posit
 type MockResponseParser struct {
 	ctrl     *gomock.Controller
 	recorder *MockResponseParserMockRecorder
+	isgomock struct{}
 }
 
 // MockResponseParserMockRecorder is the mock recorder for MockResponseParser.
