@@ -107,7 +107,7 @@ func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	s.header, err = s.config.Config.getHeader()
+	s.header, err = s.config.getHeader()
 	if err != nil {
 		return fmt.Errorf("invalid header config: %w", err)
 	}
