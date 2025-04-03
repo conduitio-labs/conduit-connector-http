@@ -1,6 +1,7 @@
 module github.com/conduitio-labs/conduit-connector-http
 
 go 1.24.2
+
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/conduitio/conduit-commons v0.5.2
