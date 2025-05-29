@@ -34,9 +34,6 @@ type Config struct {
 	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
 	// to make it easier to write templates.
 	URL string `json:"url" validate:"required"`
-
-	// Http method to use in the request
-	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
 }
 
 func (c *Config) Validate(context.Context) error {

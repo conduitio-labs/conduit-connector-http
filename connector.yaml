@@ -26,10 +26,10 @@ specification:
       - name: method
         description: Http method to use in the request
         type: string
-        default: POST
+        default: GET
         validations:
           - type: inclusion
-            value: POST,PUT,DELETE,PATCH
+            value: GET,HEAD,OPTIONS
       - name: params.*
         description: 'parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".'
         type: string

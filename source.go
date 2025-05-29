@@ -87,6 +87,9 @@ type SourceConfig struct {
 	// `bytes` are the original response's raw bytes (i.e. unparsed).
 	// The response should be a Response object.
 	ParseResponseScript string `json:"script.parseResponse"`
+
+	// Http method to use in the request
+	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 }
 
 func NewSource() sdk.Source {

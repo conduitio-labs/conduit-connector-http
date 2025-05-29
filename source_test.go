@@ -22,10 +22,12 @@ import (
 	"time"
 
 	"github.com/conduitio/conduit-commons/opencdc"
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/matryer/is"
 	"go.uber.org/mock/gomock"
+
+	"github.com/matryer/is"
 )
 
 // ResourceMap stores resources
@@ -105,13 +107,17 @@ func TestTeardownSource_NoOpen(t *testing.T) {
 func TestSource_Get(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := NewSource()
+
+	src := &Source{}
 	createServer(t)
 
-	err := src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/resource1",
-		"method": "GET",
-	})
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    "http://localhost:8082/resource/resource1",
+			"method": "GET",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 
 	err = src.Open(ctx, opencdc.Position{})
@@ -128,10 +134,13 @@ func TestSource_Options(t *testing.T) {
 	src := Source{}
 	createServer(t)
 
-	err := src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/resource1",
-		"method": "OPTIONS",
-	})
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    "http://localhost:8082/resource/resource1",
+			"method": "OPTIONS",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 
 	err = src.Open(ctx, opencdc.Position{})
@@ -150,10 +159,13 @@ func TestSource_Head(t *testing.T) {
 	src := Source{}
 	createServer(t)
 
-	err := src.Configure(ctx, map[string]string{
-		"url":    "http://localhost:8082/resource/",
-		"method": "HEAD",
-	})
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    "http://localhost:8082/resource/",
+			"method": "HEAD",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 
 	err = src.Open(ctx, opencdc.Position{})
@@ -168,20 +180,20 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	ctx := context.Background()
 
 	src := Source{}
-	cfg := map[string]string{
-		"url":                   "http://localhost:8082/resource/default-resource",
-		"method":                "GET",
-		"script.getRequestData": "./test/get_request_data.js",
-		"script.parseResponse":  "./test/parse_response.js",
-	}
-
 	createServer(t)
 
-	err := src.Configure(ctx, cfg)
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":                   "http://localhost:8082/resource/default-resource",
+			"method":                "GET",
+			"script.getRequestData": "./test/get_request_data.js",
+			"script.parseResponse":  "./test/parse_response.js",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 
 	err = src.Open(ctx, nil)
-	src.Parameters()
 	is.NoErr(err)
 
 	is.True(src.requestBuilder != nil)
@@ -193,10 +205,6 @@ func TestSource_CustomRequest(t *testing.T) {
 	ctx := context.Background()
 
 	src := Source{}
-	cfg := map[string]string{
-		"url":    "http://localhost:8082/resource/default-resource",
-		"method": "GET",
-	}
 	var previousResp map[string]interface{}
 	pos := opencdc.Position("test-position")
 
@@ -208,7 +216,13 @@ func TestSource_CustomRequest(t *testing.T) {
 
 	createServer(t)
 
-	err := src.Configure(ctx, cfg)
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    "http://localhost:8082/resource/default-resource",
+			"method": "GET",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 
 	err = src.Open(ctx, pos)
@@ -224,10 +238,6 @@ func TestSource_ParseResponse(t *testing.T) {
 	ctx := context.Background()
 
 	src := Source{}
-	cfg := map[string]string{
-		"url":    "http://localhost:8082/resource/resource1",
-		"method": "GET",
-	}
 	want := opencdc.Record{
 		Position:  opencdc.Position("pagination-token"),
 		Operation: opencdc.OperationUpdate,
@@ -261,10 +271,16 @@ func TestSource_ParseResponse(t *testing.T) {
 
 	createServer(t)
 
-	//err := src.Configure(ctx, cfg)
-	//is.NoErr(err)
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    "http://localhost:8082/resource/resource1",
+			"method": "GET",
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
+	is.NoErr(err)
 
-	err := src.Open(ctx, nil)
+	err = src.Open(ctx, nil)
 	is.NoErr(err)
 
 	got, err := src.Read(ctx)

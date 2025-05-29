@@ -46,6 +46,9 @@ type DestinationConfig struct {
 	sdk.DefaultDestinationMiddleware
 
 	Config
+
+	// Http method to use in the request
+	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
 }
 
 func (c *DestinationConfig) Validate(ctx context.Context) error {
