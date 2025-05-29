@@ -1,4 +1,4 @@
-// Copyright © 2023 Meroxa, Inc.
+// Copyright © 2025 Meroxa, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate conn-sdk-cli specgen
+//go:build tools
 
-package http
+package main
 
 import (
-	_ "embed"
-
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	_ "github.com/conduitio/conduit-connector-sdk/conn-sdk-cli"
+	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 )
-
-
-// Connector combines all constructors for each plugin in one struct.
-//go:embed connector.yaml
-var specs string
-
-var version = "(devel)"
-
-var Connector = sdk.Connector{
-	NewSpecification: sdk.YAMLSpecification(specs, version),
-	NewSource:        NewSource,
-	NewDestination:   NewDestination,
-}

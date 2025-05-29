@@ -11,6 +11,7 @@ test:
 .PHONY: generate
 generate:
 	go generate ./...
+	conn-sdk-cli readmegen -w
 
 .PHONY: install-paramgen
 install-paramgen:

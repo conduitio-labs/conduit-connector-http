@@ -15,6 +15,8 @@
 package http
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -26,9 +28,22 @@ type Config struct {
 	Headers []string
 	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
 	Params map[string]string
+
+	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
+	// The value provided to the template is [opencdc.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81),
+	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
+	// to make it easier to write templates.
+	URL string `json:"url" validate:"required"`
+	// Http method to use in the request
+	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
 }
 
-func (s *Config) addParamsToURL(origURL string) (string, error) {
+func (c *Config) Validate(context.Context) error {
+	var errs []error
+	return errors.Join(errs...)
+}
+
+func (c *Config) addParamsToURL(origURL string) (string, error) {
 	parsedURL, err := url.Parse(origURL)
 	if err != nil {
 		return "", fmt.Errorf("error parsing URL: %w", err)
@@ -36,7 +51,7 @@ func (s *Config) addParamsToURL(origURL string) (string, error) {
 	// Parse existing query parameters
 	existingParams := parsedURL.Query()
 	// Add config params
-	for key, val := range s.Params {
+	for key, val := range c.Params {
 		existingParams.Add(key, val)
 	}
 	// Update query parameters in the URL struct
@@ -45,12 +60,12 @@ func (s *Config) addParamsToURL(origURL string) (string, error) {
 	return parsedURL.String(), nil
 }
 
-func (s *Config) getHeader() (http.Header, error) {
+func (c *Config) getHeader() (http.Header, error) {
 	// create a new empty header
 	header := http.Header{}
 
 	// iterate over the pairs and add them to the header
-	for _, pair := range s.Headers {
+	for _, pair := range c.Headers {
 		// split each pair into key and value
 		parts := strings.SplitN(strings.TrimSpace(pair), ":", 2)
 		if len(parts) != 2 {
@@ -65,4 +80,8 @@ func (s *Config) getHeader() (http.Header, error) {
 		header.Add(key, value)
 	}
 	return header, nil
+}
+
+func (c *Config) hasURLTemplate() bool {
+	return strings.Contains(c.URL, "{{") || strings.Contains(c.URL, "}}")
 }

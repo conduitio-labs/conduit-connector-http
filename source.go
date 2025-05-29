@@ -14,10 +14,9 @@
 
 package http
 
-//go:generate paramgen -output=paramgen_src.go SourceConfig
-
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -63,10 +62,15 @@ type Source struct {
 	responseParser responseParser
 }
 
+func (s *Source) Config() sdk.SourceConfig {
+	return &s.config
+}
+
 type SourceConfig struct {
+	sdk.DefaultSourceMiddleware
+
 	Config
-	// Http url to send requests to
-	URL string `json:"url" validate:"required"`
+
 	// how often the connector will get data from the url
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
 	// Http method to use in the request
@@ -89,13 +93,34 @@ type SourceConfig struct {
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware()...)
+	return sdk.SourceWithMiddleware(&Source{})
 }
 
-func (s *Source) Parameters() config.Parameters {
-	return s.config.Parameters()
+func (c *SourceConfig) Validate(ctx context.Context) error {
+	var errs []error
+	if err := c.Config.Validate(ctx); err != nil {
+		errs = append(errs, err)
+	}
+	if err := c.DefaultSourceMiddleware.Validate(ctx); err != nil {
+		errs = append(errs, err)
+	}
+
+	// Custom validations
+	_, err := c.addParamsToURL(c.Config.URL)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	_, err = c.getHeader()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("invalid header config: %w", err))
+	}
+
+	return errors.Join(errs...)
 }
 
+// TODO: This method needs to be removed. If there's any custom logic in Configure(),
+// it needs to be moved to the configuration struct in the Validate() method.
 func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 	sdk.Logger(ctx).Info().Msg("configuring source...")
 
@@ -103,17 +128,28 @@ func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
-	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
-	if err != nil {
-		return err
-	}
-	s.header, err = s.config.getHeader()
-	if err != nil {
-		return fmt.Errorf("invalid header config: %w", err)
-	}
 
+	// --------------
 	if s.config.GetRequestDataScript != "" {
 		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, s.config.GetRequestDataScript)
+		if err != nil {
+			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
+		}
+	}
+	// --------------
+
+	return nil
+}
+
+func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
+	var err error
+
+	// These were already validated
+	s.config.URL, _ = s.config.addParamsToURL(s.config.URL)
+	s.header, _ = s.config.getHeader()
+
+	if s.config.GetRequestDataScript != "" {
+		s.requestBuilder, err = newJSRequestBuilder(ctx, s.config.Config, s.config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}
@@ -126,11 +162,13 @@ func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	return nil
-}
-
-func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 	sdk.Logger(ctx).Info().Msg("opening source")
+
+	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
+	if err != nil {
+		return err
+	}
+
 	// create client
 	s.client = &http.Client{}
 

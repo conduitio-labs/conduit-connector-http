@@ -1,0 +1,7 @@
+version: "1.0"
+specification:
+    name: http
+    summary: HTTP source and destination connectors for Conduit.
+    description: Conduit HTTP source and destination connectors, they connect to an HTTP URL and send HTTP requests.
+    version: ""
+    author: Meroxa, Inc.
