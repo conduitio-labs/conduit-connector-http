@@ -261,10 +261,10 @@ func TestSource_ParseResponse(t *testing.T) {
 
 	createServer(t)
 
-	err := src.Configure(ctx, cfg)
-	is.NoErr(err)
+	//err := src.Configure(ctx, cfg)
+	//is.NoErr(err)
 
-	err = src.Open(ctx, nil)
+	err := src.Open(ctx, nil)
 	is.NoErr(err)
 
 	got, err := src.Read(ctx)

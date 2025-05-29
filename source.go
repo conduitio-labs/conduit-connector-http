@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/conduitio/conduit-commons/config"
 	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"golang.org/x/time/rate"
@@ -73,8 +72,6 @@ type SourceConfig struct {
 
 	// how often the connector will get data from the url
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
-	// Http method to use in the request
-	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 
 	// The path to a .js file containing the code to prepare the request data.
 	// The signature of the function needs to be:
@@ -127,7 +124,7 @@ func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 	s.header, _ = s.config.getHeader()
 
 	if s.config.GetRequestDataScript != "" {
-		s.requestBuilder, err = newJSRequestBuilder(ctx, s.config.Config, s.config.GetRequestDataScript)
+		s.requestBuilder, err = newJSRequestBuilder(ctx, s.config, s.config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}

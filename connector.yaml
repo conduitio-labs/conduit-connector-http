@@ -1,7 +1,209 @@
 version: "1.0"
 specification:
-    name: http
-    summary: HTTP source and destination connectors for Conduit.
-    description: Conduit HTTP source and destination connectors, they connect to an HTTP URL and send HTTP requests.
-    version: ""
-    author: Meroxa, Inc.
+  name: http
+  summary: HTTP source and destination connectors for Conduit.
+  description: Conduit HTTP source and destination connectors, they connect to an HTTP URL and send HTTP requests.
+  version: v0.3.0
+  author: Meroxa, Inc.
+  source:
+    parameters:
+      - name: url
+        description: |-
+          URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
+          The value provided to the template is [opencdc.Record](https://conduit.io/docs/using/opencdc-record),
+          so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
+          to make it easier to write templates.
+        type: string
+        default: ""
+        validations:
+          - type: required
+            value: ""
+      - name: headers
+        description: 'Http headers to use in the request, comma separated list of : separated pairs'
+        type: string
+        default: ""
+        validations: []
+      - name: method
+        description: Http method to use in the request
+        type: string
+        default: POST
+        validations:
+          - type: inclusion
+            value: POST,PUT,DELETE,PATCH
+      - name: params.*
+        description: 'parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".'
+        type: string
+        default: ""
+        validations: []
+      - name: pollingPeriod
+        description: how often the connector will get data from the url
+        type: duration
+        default: 5m
+        validations: []
+      - name: script.getRequestData
+        description: |-
+          The path to a .js file containing the code to prepare the request data.
+          The signature of the function needs to be:
+          `function getRequestData(cfg, previousResponse, position)` where:
+          * `cfg` (a map) is the connector configuration
+          * `previousResponse` (a map) contains data from the previous response (if any), returned by `parseResponse`
+          * `position` (a byte array) contains the starting position of the connector.
+          The function needs to return a Request object.
+        type: string
+        default: ""
+        validations: []
+      - name: script.parseResponse
+        description: |-
+          The path to a .js file containing the code to parse the response.
+          The signature of the function needs to be:
+          `function parseResponse(bytes)` where
+          `bytes` are the original response's raw bytes (i.e. unparsed).
+          The response should be a Response object.
+        type: string
+        default: ""
+        validations: []
+      - name: sdk.batch.delay
+        description: Maximum delay before an incomplete batch is read from the source.
+        type: duration
+        default: "0"
+        validations: []
+      - name: sdk.batch.size
+        description: Maximum size of batch before it gets read from the source.
+        type: int
+        default: "0"
+        validations:
+          - type: greater-than
+            value: "-1"
+      - name: sdk.schema.context.enabled
+        description: |-
+          Specifies whether to use a schema context name. If set to false, no schema context name will
+          be used, and schemas will be saved with the subject name specified in the connector
+          (not safe because of name conflicts).
+        type: bool
+        default: "true"
+        validations: []
+      - name: sdk.schema.context.name
+        description: |-
+          Schema context name to be used. Used as a prefix for all schema subject names.
+          If empty, defaults to the connector ID.
+        type: string
+        default: ""
+        validations: []
+      - name: sdk.schema.extract.key.enabled
+        description: Whether to extract and encode the record key with a schema.
+        type: bool
+        default: "true"
+        validations: []
+      - name: sdk.schema.extract.key.subject
+        description: |-
+          The subject of the key schema. If the record metadata contains the field
+          "opencdc.collection" it is prepended to the subject name and separated
+          with a dot.
+        type: string
+        default: key
+        validations: []
+      - name: sdk.schema.extract.payload.enabled
+        description: Whether to extract and encode the record payload with a schema.
+        type: bool
+        default: "true"
+        validations: []
+      - name: sdk.schema.extract.payload.subject
+        description: |-
+          The subject of the payload schema. If the record metadata contains the
+          field "opencdc.collection" it is prepended to the subject name and
+          separated with a dot.
+        type: string
+        default: payload
+        validations: []
+      - name: sdk.schema.extract.type
+        description: The type of the payload schema.
+        type: string
+        default: avro
+        validations:
+          - type: inclusion
+            value: avro
+  destination:
+    parameters:
+      - name: url
+        description: |-
+          URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
+          The value provided to the template is [opencdc.Record](https://conduit.io/docs/using/opencdc-record),
+          so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
+          to make it easier to write templates.
+        type: string
+        default: ""
+        validations:
+          - type: required
+            value: ""
+      - name: headers
+        description: 'Http headers to use in the request, comma separated list of : separated pairs'
+        type: string
+        default: ""
+        validations: []
+      - name: method
+        description: Http method to use in the request
+        type: string
+        default: POST
+        validations:
+          - type: inclusion
+            value: POST,PUT,DELETE,PATCH
+      - name: params.*
+        description: 'parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".'
+        type: string
+        default: ""
+        validations: []
+      - name: sdk.batch.delay
+        description: Maximum delay before an incomplete batch is written to the destination.
+        type: duration
+        default: "0"
+        validations: []
+      - name: sdk.batch.size
+        description: Maximum size of batch before it gets written to the destination.
+        type: int
+        default: "0"
+        validations:
+          - type: greater-than
+            value: "-1"
+      - name: sdk.rate.burst
+        description: |-
+          Allow bursts of at most X records (0 or less means that bursts are not
+          limited). Only takes effect if a rate limit per second is set. Note that
+          if `sdk.batch.size` is bigger than `sdk.rate.burst`, the effective batch
+          size will be equal to `sdk.rate.burst`.
+        type: int
+        default: "0"
+        validations:
+          - type: greater-than
+            value: "-1"
+      - name: sdk.rate.perSecond
+        description: Maximum number of records written per second (0 means no rate limit).
+        type: float
+        default: "0"
+        validations:
+          - type: greater-than
+            value: "-1"
+      - name: sdk.record.format
+        description: |-
+          The format of the output record. See the Conduit documentation for a full
+          list of supported formats (https://conduit.io/docs/using/connectors/configuration-parameters/output-format).
+        type: string
+        default: opencdc/json
+        validations: []
+      - name: sdk.record.format.options
+        description: |-
+          Options to configure the chosen output record format. Options are normally
+          key=value pairs separated with comma (e.g. opt1=val2,opt2=val2), except
+          for the `template` record format, where options are a Go template.
+        type: string
+        default: ""
+        validations: []
+      - name: sdk.schema.extract.key.enabled
+        description: Whether to extract and decode the record key with a schema.
+        type: bool
+        default: "true"
+        validations: []
+      - name: sdk.schema.extract.payload.enabled
+        description: Whether to extract and decode the record payload with a schema.
+        type: bool
+        default: "true"
+        validations: []
