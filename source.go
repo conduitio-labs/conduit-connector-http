@@ -119,28 +119,6 @@ func (c *SourceConfig) Validate(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// TODO: This method needs to be removed. If there's any custom logic in Configure(),
-// it needs to be moved to the configuration struct in the Validate() method.
-func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
-	sdk.Logger(ctx).Info().Msg("configuring source...")
-
-	err := sdk.Util.ParseConfig(ctx, cfg, &s.config, s.config.Parameters())
-	if err != nil {
-		return fmt.Errorf("invalid config: %w", err)
-	}
-
-	// --------------
-	if s.config.GetRequestDataScript != "" {
-		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, s.config.GetRequestDataScript)
-		if err != nil {
-			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
-		}
-	}
-	// --------------
-
-	return nil
-}
-
 func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 	var err error
 
@@ -169,12 +147,9 @@ func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 		return err
 	}
 
-	// create client
 	s.client = &http.Client{}
 
-	// check connection
-	err := s.testConnection(ctx)
-	if err != nil {
+	if err := s.testConnection(ctx); err != nil {
 		return fmt.Errorf("failed connection test: %w", err)
 	}
 
