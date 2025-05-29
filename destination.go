@@ -110,8 +110,9 @@ func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int,
 			return i, err
 		}
 	}
-	return 0, nil
+	return len(records), nil
 }
+
 func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	URL, err := d.EvaluateURL(rec)
 	if err != nil {
@@ -123,6 +124,7 @@ func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	}
 	return URL, nil
 }
+
 func (d *Destination) EvaluateURL(rec opencdc.Record) (string, error) {
 	if d.urlTmpl == nil {
 		return d.config.URL, nil
