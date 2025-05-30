@@ -28,7 +28,7 @@ type Config struct {
 	Params map[string]string
 }
 
-func (s *Config) addParamsToURL(origURL string) (string, error) {
+func (c *Config) addParamsToURL(origURL string) (string, error) {
 	parsedURL, err := url.Parse(origURL)
 	if err != nil {
 		return "", fmt.Errorf("error parsing URL: %w", err)
@@ -36,7 +36,7 @@ func (s *Config) addParamsToURL(origURL string) (string, error) {
 	// Parse existing query parameters
 	existingParams := parsedURL.Query()
 	// Add config params
-	for key, val := range s.Params {
+	for key, val := range c.Params {
 		existingParams.Add(key, val)
 	}
 	// Update query parameters in the URL struct
@@ -45,12 +45,12 @@ func (s *Config) addParamsToURL(origURL string) (string, error) {
 	return parsedURL.String(), nil
 }
 
-func (s *Config) getHeader() (http.Header, error) {
+func (c *Config) getHeader() (http.Header, error) {
 	// create a new empty header
 	header := http.Header{}
 
 	// iterate over the pairs and add them to the header
-	for _, pair := range s.Headers {
+	for _, pair := range c.Headers {
 		// split each pair into key and value
 		parts := strings.SplitN(strings.TrimSpace(pair), ":", 2)
 		if len(parts) != 2 {

@@ -14,10 +14,9 @@
 
 package http
 
-//go:generate paramgen -output=paramgen_src.go SourceConfig
-
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -25,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/conduitio/conduit-commons/config"
 	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"golang.org/x/time/rate"
@@ -63,14 +61,20 @@ type Source struct {
 	responseParser responseParser
 }
 
+func (s *Source) Config() sdk.SourceConfig {
+	return &s.config
+}
+
 type SourceConfig struct {
+	sdk.DefaultSourceMiddleware
+
 	Config
+
 	// Http url to send requests to
 	URL string `json:"url" validate:"required"`
+
 	// how often the connector will get data from the url
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
-	// Http method to use in the request
-	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 
 	// The path to a .js file containing the code to prepare the request data.
 	// The signature of the function needs to be:
@@ -86,34 +90,45 @@ type SourceConfig struct {
 	// `bytes` are the original response's raw bytes (i.e. unparsed).
 	// The response should be a Response object.
 	ParseResponseScript string `json:"script.parseResponse"`
+
+	// HTTP method to use in the request
+	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 }
 
 func NewSource() sdk.Source {
-	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware()...)
+	return sdk.SourceWithMiddleware(&Source{})
 }
 
-func (s *Source) Parameters() config.Parameters {
-	return s.config.Parameters()
+func (c *SourceConfig) Validate(ctx context.Context) error {
+	var errs []error
+
+	if err := c.DefaultSourceMiddleware.Validate(ctx); err != nil {
+		errs = append(errs, err)
+	}
+
+	// Custom validations
+	_, err := c.addParamsToURL(c.URL)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	_, err = c.getHeader()
+	if err != nil {
+		errs = append(errs, fmt.Errorf("invalid header config: %w", err))
+	}
+
+	return errors.Join(errs...)
 }
 
-func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
-	sdk.Logger(ctx).Info().Msg("configuring source...")
+func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
+	var err error
 
-	err := sdk.Util.ParseConfig(ctx, cfg, &s.config, s.config.Parameters())
-	if err != nil {
-		return fmt.Errorf("invalid config: %w", err)
-	}
-	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
-	if err != nil {
-		return err
-	}
-	s.header, err = s.config.getHeader()
-	if err != nil {
-		return fmt.Errorf("invalid header config: %w", err)
-	}
+	// These were already validated
+	s.config.URL, _ = s.config.addParamsToURL(s.config.URL)
+	s.header, _ = s.config.getHeader()
 
 	if s.config.GetRequestDataScript != "" {
-		s.requestBuilder, err = newJSRequestBuilder(ctx, cfg, s.config.GetRequestDataScript)
+		s.requestBuilder, err = newJSRequestBuilder(ctx, s.config, s.config.GetRequestDataScript)
 		if err != nil {
 			return fmt.Errorf("failed initializing %v: %w", getRequestDataFn, err)
 		}
@@ -126,17 +141,16 @@ func (s *Source) Configure(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	return nil
-}
-
-func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 	sdk.Logger(ctx).Info().Msg("opening source")
-	// create client
+
+	s.config.URL, err = s.config.addParamsToURL(s.config.URL)
+	if err != nil {
+		return err
+	}
+
 	s.client = &http.Client{}
 
-	// check connection
-	err := s.testConnection(ctx)
-	if err != nil {
+	if err := s.testConnection(ctx); err != nil {
 		return fmt.Errorf("failed connection test: %w", err)
 	}
 
