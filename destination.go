@@ -64,13 +64,13 @@ func (c *DestinationConfig) Validate(ctx context.Context) error {
 	}
 
 	// Custom validations
-	_, err = c.Config.getHeader()
+	_, err = c.getHeader()
 	if err != nil {
 		errs = append(errs, fmt.Errorf("invalid header config: %w", err))
 	}
 
 	if c.hasURLTemplate() {
-		_, err = template.New("").Funcs(sprig.FuncMap()).Parse(c.Config.URL)
+		_, err = template.New("").Funcs(sprig.FuncMap()).Parse(c.URL)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("error while parsing the URL template: %w", err))
 		}

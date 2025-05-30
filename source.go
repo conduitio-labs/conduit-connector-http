@@ -106,7 +106,7 @@ func (c *SourceConfig) Validate(ctx context.Context) error {
 	}
 
 	// Custom validations
-	_, err := c.addParamsToURL(c.Config.URL)
+	_, err := c.addParamsToURL(c.URL)
 	if err != nil {
 		errs = append(errs, err)
 	}
