@@ -179,7 +179,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource()
+	src := Source{}
 	createServer(t)
 
 	err := sdk.Util.ParseConfig(ctx,
@@ -204,7 +204,7 @@ func TestSource_CustomRequest(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource()
+	src := Source{}
 	var previousResp map[string]interface{}
 	pos := opencdc.Position("test-position")
 
@@ -237,7 +237,7 @@ func TestSource_ParseResponse(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := NewSource()
+	src := Source{}
 	want := opencdc.Record{
 		Position:  opencdc.Position("pagination-token"),
 		Operation: opencdc.OperationUpdate,
