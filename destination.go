@@ -118,7 +118,7 @@ func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int,
 			return i, err
 		}
 	}
-	return 0, nil
+	return len(records), nil
 }
 func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	URL, err := d.EvaluateURL(rec)
