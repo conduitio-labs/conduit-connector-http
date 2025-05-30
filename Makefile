@@ -13,10 +13,6 @@ generate:
 	go generate ./...
 	conn-sdk-cli readmegen -w
 
-.PHONY: install-paramgen
-install-paramgen:
-	go install github.com/conduitio/conduit-connector-sdk/cmd/paramgen@latest
-
 .PHONY: install-tools
 install-tools:
 	@echo Installing tools from tools/go.mod
