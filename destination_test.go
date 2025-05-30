@@ -95,16 +95,14 @@ func TestDestination_Delete(t *testing.T) {
 
 func TestDestination_ValidateConnection(t *testing.T) {
 	is := is.New(t)
-	// make sure the server is not on
-	shutdownServer()
-	url := "http://localhost:8081/resource/1"
+	// unused url
+	url := "http://localhost:8082/resource/1"
 	ctx := context.Background()
 	dest := NewDestination()
-	// with validating connection
 	err := dest.Configure(ctx, map[string]string{
 		"url":                url,
 		"method":             "DELETE",
-		"validateConnection": "false",
+		"validateConnection": "false", // don't validate connection
 	})
 	is.NoErr(err)
 	err = dest.Open(ctx)
@@ -231,17 +229,4 @@ func handleSingleResource(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-// ShutdownServer gracefully shuts down the HTTP server.
-func shutdownServer() {
-	if !serverRunning {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		fmt.Printf("server shutdown error: %s\n", err)
-	}
-	serverRunning = false
 }

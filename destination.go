@@ -44,8 +44,6 @@ type Destination struct {
 type DestinationConfig struct {
 	Config
 
-	// ValidateConnection send a HEAD request when opening the connector to check if the connection works.
-	ValidateConnection bool `json:"validateConnection" default:"true"`
 	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
 	// The value provided to the template is [opencdc.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81),
 	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
