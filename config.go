@@ -15,8 +15,6 @@
 package http
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -28,11 +26,6 @@ type Config struct {
 	Headers []string
 	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
 	Params map[string]string
-}
-
-func (c *Config) Validate(context.Context) error {
-	var errs []error
-	return errors.Join(errs...)
 }
 
 func (c *Config) addParamsToURL(origURL string) (string, error) {
