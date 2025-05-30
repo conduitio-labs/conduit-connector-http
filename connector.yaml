@@ -20,7 +20,7 @@ specification:
         default: ""
         validations: []
       - name: method
-        description: Http method to use in the request
+        description: HTTP method to use in the request
         type: string
         default: GET
         validations:
@@ -137,7 +137,7 @@ specification:
         default: ""
         validations: []
       - name: method
-        description: Http method to use in the request
+        description: HTTP method to use in the request
         type: string
         default: POST
         validations:

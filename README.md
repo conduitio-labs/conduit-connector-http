@@ -37,7 +37,7 @@ pipelines:
           # Type: string
           # Required: no
           headers: ""
-          # Http method to use in the request
+          # HTTP method to use in the request
           # Type: string
           # Required: no
           method: "GET"
@@ -152,7 +152,7 @@ pipelines:
           # Type: string
           # Required: no
           headers: ""
-          # Http method to use in the request
+          # HTTP method to use in the request
           # Type: string
           # Required: no
           method: "POST"
