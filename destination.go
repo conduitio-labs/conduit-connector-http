@@ -54,7 +54,7 @@ type DestinationConfig struct {
 	// to make it easier to write templates.
 	URL string `json:"url" validate:"required"`
 
-	// Http method to use in the request
+	// HTTP method to use in the request
 	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
 }
 

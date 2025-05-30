@@ -91,7 +91,7 @@ type SourceConfig struct {
 	// The response should be a Response object.
 	ParseResponseScript string `json:"script.parseResponse"`
 
-	// Http method to use in the request
+	// HTTP method to use in the request
 	Method string `default:"GET" validate:"inclusion=GET|HEAD|OPTIONS"`
 }
 
