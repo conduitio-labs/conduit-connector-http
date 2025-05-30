@@ -28,12 +28,6 @@ type Config struct {
 	Headers []string
 	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
 	Params map[string]string
-
-	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
-	// The value provided to the template is [opencdc.Record](https://conduit.io/docs/using/opencdc-record),
-	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
-	// to make it easier to write templates.
-	URL string `json:"url" validate:"required"`
 }
 
 func (c *Config) Validate(context.Context) error {
@@ -78,8 +72,4 @@ func (c *Config) getHeader() (http.Header, error) {
 		header.Add(key, value)
 	}
 	return header, nil
-}
-
-func (c *Config) hasURLTemplate() bool {
-	return strings.Contains(c.URL, "{{") || strings.Contains(c.URL, "}}")
 }

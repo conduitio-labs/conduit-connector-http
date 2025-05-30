@@ -70,6 +70,9 @@ type SourceConfig struct {
 
 	Config
 
+	// Http url to send requests to
+	URL string `json:"url" validate:"required"`
+
 	// how often the connector will get data from the url
 	PollingPeriod time.Duration `json:"pollingPeriod" default:"5m"`
 

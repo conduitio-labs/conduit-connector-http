@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -46,6 +47,12 @@ type DestinationConfig struct {
 	sdk.DefaultDestinationMiddleware
 
 	Config
+
+	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
+	// The value provided to the template is [opencdc.Record](https://conduit.io/docs/using/opencdc-record),
+	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
+	// to make it easier to write templates.
+	URL string `json:"url" validate:"required"`
 
 	// Http method to use in the request
 	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
@@ -186,4 +193,8 @@ func (d *Destination) Teardown(ctx context.Context) error {
 		d.client.CloseIdleConnections()
 	}
 	return nil
+}
+
+func (c *DestinationConfig) hasURLTemplate() bool {
+	return strings.Contains(c.URL, "{{") || strings.Contains(c.URL, "}}")
 }

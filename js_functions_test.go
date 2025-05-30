@@ -31,7 +31,7 @@ func TestSourceExtension_GetRequestData(t *testing.T) {
 	underTest, err := newJSRequestBuilder(
 		ctx,
 		SourceConfig{
-			Config: Config{URL: "http://example.com"},
+			URL: "http://example.com",
 		},
 		"./test/get_request_data.js",
 	)
