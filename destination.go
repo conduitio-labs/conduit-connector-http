@@ -62,10 +62,6 @@ func (c *DestinationConfig) Validate(ctx context.Context) error {
 	var errs []error
 	var err error
 
-	if err = c.Config.Validate(ctx); err != nil {
-		errs = append(errs, err)
-	}
-
 	if err = c.DefaultDestinationMiddleware.Validate(ctx); err != nil {
 		errs = append(errs, err)
 	}

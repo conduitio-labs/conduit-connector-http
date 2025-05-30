@@ -101,9 +101,7 @@ func NewSource() sdk.Source {
 
 func (c *SourceConfig) Validate(ctx context.Context) error {
 	var errs []error
-	if err := c.Config.Validate(ctx); err != nil {
-		errs = append(errs, err)
-	}
+
 	if err := c.DefaultSourceMiddleware.Validate(ctx); err != nil {
 		errs = append(errs, err)
 	}
