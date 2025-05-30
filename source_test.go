@@ -97,8 +97,8 @@ func createServer(t *testing.T) {
 }
 
 func TestTeardownSource_NoOpen(t *testing.T) {
-	con := NewSource()
-	err := con.Teardown(context.Background())
+	src := NewSource()
+	err := src.Teardown(context.Background())
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -108,7 +108,7 @@ func TestSource_Get(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := &Source{}
+	src := NewSource()
 	createServer(t)
 
 	err := sdk.Util.ParseConfig(ctx,
@@ -131,7 +131,7 @@ func TestSource_Get(t *testing.T) {
 func TestSource_Options(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := Source{}
+	src := NewSource()
 	createServer(t)
 
 	err := sdk.Util.ParseConfig(ctx,
@@ -156,7 +156,7 @@ func TestSource_Options(t *testing.T) {
 func TestSource_Head(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
-	src := Source{}
+	src := NewSource()
 	createServer(t)
 
 	err := sdk.Util.ParseConfig(ctx,
@@ -179,7 +179,7 @@ func TestSource_ConfigureWithScripts(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := Source{}
+	src := NewSource()
 	createServer(t)
 
 	err := sdk.Util.ParseConfig(ctx,
@@ -204,7 +204,7 @@ func TestSource_CustomRequest(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := Source{}
+	src := NewSource()
 	var previousResp map[string]interface{}
 	pos := opencdc.Position("test-position")
 
@@ -237,7 +237,7 @@ func TestSource_ParseResponse(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
 
-	src := Source{}
+	src := NewSource()
 	want := opencdc.Record{
 		Position:  opencdc.Position("pagination-token"),
 		Operation: opencdc.OperationUpdate,
