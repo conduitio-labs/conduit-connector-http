@@ -15,6 +15,7 @@ const (
 	SourceConfigScriptGetRequestData = "script.getRequestData"
 	SourceConfigScriptParseResponse  = "script.parseResponse"
 	SourceConfigUrl                  = "url"
+	SourceConfigValidateConnection   = "validateConnection"
 )
 
 func (SourceConfig) Parameters() map[string]config.Parameter {
@@ -64,6 +65,12 @@ func (SourceConfig) Parameters() map[string]config.Parameter {
 			Validations: []config.Validation{
 				config.ValidationRequired{},
 			},
+		},
+		SourceConfigValidateConnection: {
+			Default:     "true",
+			Description: "ValidateConnection send a HEAD request when opening the connector to check if the connection works.",
+			Type:        config.ParameterTypeBool,
+			Validations: []config.Validation{},
 		},
 	}
 }

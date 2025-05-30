@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	DestinationConfigHeaders = "headers"
-	DestinationConfigMethod  = "method"
-	DestinationConfigParams  = "params.*"
-	DestinationConfigUrl     = "url"
+	DestinationConfigHeaders            = "headers"
+	DestinationConfigMethod             = "method"
+	DestinationConfigParams             = "params.*"
+	DestinationConfigUrl                = "url"
+	DestinationConfigValidateConnection = "validateConnection"
 )
 
 func (DestinationConfig) Parameters() map[string]config.Parameter {
@@ -43,6 +44,12 @@ func (DestinationConfig) Parameters() map[string]config.Parameter {
 			Validations: []config.Validation{
 				config.ValidationRequired{},
 			},
+		},
+		DestinationConfigValidateConnection: {
+			Default:     "true",
+			Description: "ValidateConnection send a HEAD request when opening the connector to check if the connection works.",
+			Type:        config.ParameterTypeBool,
+			Validations: []config.Validation{},
 		},
 	}
 }

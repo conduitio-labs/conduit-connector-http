@@ -163,6 +163,21 @@ func TestSource_Head(t *testing.T) {
 	is.NoErr(err)
 }
 
+func TestSource_ValidateConnection(t *testing.T) {
+	is := is.New(t)
+	url := "http://localhost:8082/resource/1" // unused url
+	ctx := context.Background()
+	src := NewSource()
+	err := src.Configure(ctx, map[string]string{
+		"url":                url,
+		"method":             "GET",
+		"validateConnection": "false", // don't validate connection
+	})
+	is.NoErr(err)
+	err = src.Open(ctx, nil)
+	is.NoErr(err) // HEAD request won't be called
+}
+
 func TestSource_ConfigureWithScripts(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
