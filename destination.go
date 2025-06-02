@@ -14,11 +14,10 @@
 
 package http
 
-//go:generate paramgen -output=paramgen_dest.go DestinationConfig
-
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,7 +26,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/conduitio/conduit-commons/config"
 	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
@@ -41,49 +39,62 @@ type Destination struct {
 	urlTmpl *template.Template
 }
 
+func (d *Destination) Config() sdk.DestinationConfig {
+	return &d.config
+}
+
 type DestinationConfig struct {
+	sdk.DefaultDestinationMiddleware
+
 	Config
+
 	// URL is a Go template expression for the URL used in the HTTP request, using Go [templates](https://pkg.go.dev/text/template).
-	// The value provided to the template is [opencdc.Record](https://github.com/ConduitIO/conduit-connector-sdk/blob/bfc1d83eb75460564fde8cb4f8f96318f30bd1b4/record.go#L81),
+	// The value provided to the template is [opencdc.Record](https://conduit.io/docs/using/opencdc-record),
 	// so the template has access to all its fields (e.g. .Position, .Key, .Metadata, and so on). We also inject all template functions provided by [sprig](https://masterminds.github.io/sprig/)
 	// to make it easier to write templates.
 	URL string `json:"url" validate:"required"`
-	// Http method to use in the request
+
+	// HTTP method to use in the request
 	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
 }
 
-func NewDestination() sdk.Destination {
-	return sdk.DestinationWithMiddleware(&Destination{}, sdk.DefaultDestinationMiddleware()...)
-}
+func (c *DestinationConfig) Validate(ctx context.Context) error {
+	var errs []error
+	var err error
 
-func (d *Destination) Parameters() config.Parameters {
-	return d.config.Parameters()
-}
-
-func (d *Destination) Configure(ctx context.Context, cfg config.Config) error {
-	sdk.Logger(ctx).Info().Msg("Configuring Destination...")
-	err := sdk.Util.ParseConfig(ctx, cfg, &d.config, d.config.Parameters())
-	if err != nil {
-		return fmt.Errorf("invalid config: %w", err)
+	if err = c.DefaultDestinationMiddleware.Validate(ctx); err != nil {
+		errs = append(errs, err)
 	}
 
-	d.header, err = d.config.getHeader()
+	// Custom validations
+	_, err = c.getHeader()
 	if err != nil {
-		return fmt.Errorf("invalid header config: %w", err)
+		errs = append(errs, fmt.Errorf("invalid header config: %w", err))
 	}
-	if strings.Contains(d.config.URL, "{{") {
-		// create URL template
-		d.urlTmpl, err = template.New("").Funcs(sprig.FuncMap()).Parse(d.config.URL)
+
+	if c.hasURLTemplate() {
+		_, err = template.New("").Funcs(sprig.FuncMap()).Parse(c.URL)
 		if err != nil {
-			return fmt.Errorf("error while parsing the URL template: %w", err)
+			errs = append(errs, fmt.Errorf("error while parsing the URL template: %w", err))
 		}
 	}
-	return nil
+
+	return errors.Join(errs...)
+}
+
+func NewDestination() sdk.Destination {
+	return sdk.DestinationWithMiddleware(&Destination{})
 }
 
 func (d *Destination) Open(ctx context.Context) error {
-	// create client
 	d.client = &http.Client{}
+
+	// ignore errors (these were already validated in Validate())
+	d.header, _ = d.config.getHeader()
+
+	if d.config.hasURLTemplate() {
+		d.urlTmpl, _ = template.New("").Funcs(sprig.FuncMap()).Parse(d.config.URL)
+	}
 
 	// check connection
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, d.config.URL, nil)
@@ -110,7 +121,7 @@ func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int,
 			return i, err
 		}
 	}
-	return 0, nil
+	return len(records), nil
 }
 func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	URL, err := d.EvaluateURL(rec)
@@ -178,4 +189,8 @@ func (d *Destination) Teardown(ctx context.Context) error {
 		d.client.CloseIdleConnections()
 	}
 	return nil
+}
+
+func (c *DestinationConfig) hasURLTemplate() bool {
+	return strings.Contains(c.URL, "{{") || strings.Contains(c.URL, "}}")
 }

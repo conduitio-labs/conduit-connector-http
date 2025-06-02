@@ -12,13 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:generate conn-sdk-cli specgen
+
 package http
 
-import sdk "github.com/conduitio/conduit-connector-sdk"
+import (
+	_ "embed"
+
+	sdk "github.com/conduitio/conduit-connector-sdk"
+)
 
 // Connector combines all constructors for each plugin in one struct.
+//
+//go:embed connector.yaml
+var specs string
+
+var version = "(devel)"
+
 var Connector = sdk.Connector{
-	NewSpecification: Specification,
+	NewSpecification: sdk.YAMLSpecification(specs, version),
 	NewSource:        NewSource,
 	NewDestination:   NewDestination,
 }
