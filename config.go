@@ -26,7 +26,7 @@ type Config struct {
 	Headers []string
 	// parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".
 	Params map[string]string
-	// ValidateConnection send a HEAD request when opening the connector to check if the connection works.
+	// ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
 	ValidateConnection bool `json:"validateConnection" default:"true"`
 }
 

@@ -110,11 +110,14 @@ func TestDestination_ValidateConnection(t *testing.T) {
 	url := "http://localhost:8082/resource/1"
 	ctx := context.Background()
 	dest := NewDestination()
-	err := dest.Configure(ctx, map[string]string{
-		"url":                url,
-		"method":             "DELETE",
-		"validateConnection": "false", // don't validate connection
-	})
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":                url,
+			"method":             "DELETE",
+			"validateConnection": "false", // don't validate connection
+		}, dest.Config(),
+		Connector.NewSpecification().DestinationParams,
+	)
 	is.NoErr(err)
 	err = dest.Open(ctx)
 	is.NoErr(err) // HEAD request won't be called

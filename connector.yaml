@@ -58,6 +58,11 @@ specification:
         type: string
         default: ""
         validations: []
+      - name: validateConnection
+        description: ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
+        type: bool
+        default: "true"
+        validations: []
       - name: sdk.batch.delay
         description: Maximum delay before an incomplete batch is read from the source.
         type: duration
@@ -147,6 +152,11 @@ specification:
         description: 'parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".'
         type: string
         default: ""
+        validations: []
+      - name: validateConnection
+        description: ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
+        type: bool
+        default: "true"
         validations: []
       - name: sdk.batch.delay
         description: Maximum delay before an incomplete batch is written to the destination.

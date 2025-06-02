@@ -180,11 +180,14 @@ func TestSource_ValidateConnection(t *testing.T) {
 	url := "http://localhost:8082/resource/1" // unused url
 	ctx := context.Background()
 	src := NewSource()
-	err := src.Configure(ctx, map[string]string{
-		"url":                url,
-		"method":             "GET",
-		"validateConnection": "false", // don't validate connection
-	})
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":                url,
+			"method":             "GET",
+			"validateConnection": "false", // don't validate connection
+		}, src.Config(),
+		Connector.NewSpecification().SourceParams,
+	)
 	is.NoErr(err)
 	err = src.Open(ctx, nil)
 	is.NoErr(err) // HEAD request won't be called
