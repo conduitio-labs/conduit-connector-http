@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/conduitio/conduit-commons/opencdc"
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/matryer/is"
 )
 
@@ -51,11 +52,16 @@ func TestDestination_Post(t *testing.T) {
 	url := "http://localhost:8081/resource"
 	ctx := context.Background()
 	dest := NewDestination()
-	err := dest.Configure(ctx, map[string]string{
-		"url":    url,
-		"method": "POST",
-	})
+
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    url,
+			"method": "POST",
+		}, dest.Config(),
+		Connector.NewSpecification().DestinationParams,
+	)
 	is.NoErr(err)
+
 	err = dest.Open(ctx)
 	is.NoErr(err)
 	rec := opencdc.Record{
@@ -77,11 +83,16 @@ func TestDestination_Delete(t *testing.T) {
 	url := "http://localhost:8081/resource/1"
 	ctx := context.Background()
 	dest := NewDestination()
-	err := dest.Configure(ctx, map[string]string{
-		"url":    url,
-		"method": "DELETE",
-	})
+
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    url,
+			"method": "DELETE",
+		}, dest.Config(),
+		Connector.NewSpecification().DestinationParams,
+	)
 	is.NoErr(err)
+
 	err = dest.Open(ctx)
 	is.NoErr(err)
 	rec := opencdc.Record{}
@@ -115,11 +126,16 @@ func TestDestination_DynamicURL(t *testing.T) {
 	url := "http://localhost:8081/resource/{{.Payload.After.id}}"
 	ctx := context.Background()
 	dest := NewDestination()
-	err := dest.Configure(ctx, map[string]string{
-		"url":    url,
-		"method": "DELETE",
-	})
+
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":    url,
+			"method": "DELETE",
+		}, dest.Config(),
+		Connector.NewSpecification().DestinationParams,
+	)
 	is.NoErr(err)
+
 	rec := opencdc.Record{
 		Payload: opencdc.Change{
 			After: opencdc.StructuredData{

@@ -11,10 +11,7 @@ test:
 .PHONY: generate
 generate:
 	go generate ./...
-
-.PHONY: install-paramgen
-install-paramgen:
-	go install github.com/conduitio/conduit-connector-sdk/cmd/paramgen@latest
+	conn-sdk-cli readmegen -w
 
 .PHONY: install-tools
 install-tools:

@@ -95,10 +95,10 @@ func newGojaContext(ctx context.Context, srcPath, fnName string) (*gojaContext, 
 
 type jsRequestBuilder struct {
 	gojaCtx *gojaContext
-	cfg     map[string]string
+	cfg     SourceConfig
 }
 
-func newJSRequestBuilder(ctx context.Context, cfg map[string]string, srcPath string) (*jsRequestBuilder, error) {
+func newJSRequestBuilder(ctx context.Context, cfg SourceConfig, srcPath string) (*jsRequestBuilder, error) {
 	gojaCtx, err := newGojaContext(ctx, srcPath, getRequestDataFn)
 	if err != nil {
 		return nil, err
