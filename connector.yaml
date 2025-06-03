@@ -3,7 +3,7 @@ specification:
   name: http
   summary: HTTP source and destination connectors for Conduit.
   description: Conduit HTTP source and destination connectors, they connect to an HTTP URL and send HTTP requests.
-  version: v0.3.0
+  version: v0.4.0
   author: Meroxa, Inc.
   source:
     parameters:
@@ -57,6 +57,11 @@ specification:
           The response should be a Response object.
         type: string
         default: ""
+        validations: []
+      - name: validateConnection
+        description: ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
+        type: bool
+        default: "true"
         validations: []
       - name: sdk.batch.delay
         description: Maximum delay before an incomplete batch is read from the source.
@@ -147,6 +152,11 @@ specification:
         description: 'parameters to use in the request, use params.* as the config key and specify its value, ex: set "params.id" as "1".'
         type: string
         default: ""
+        validations: []
+      - name: validateConnection
+        description: ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
+        type: bool
+        default: "true"
         validations: []
       - name: sdk.batch.delay
         description: Maximum delay before an incomplete batch is written to the destination.

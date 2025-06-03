@@ -97,18 +97,20 @@ func (d *Destination) Open(ctx context.Context) error {
 	}
 
 	// check connection
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, d.config.URL, nil)
-	if err != nil {
-		return fmt.Errorf("error creating HTTP request %q: %w", d.config.URL, err)
-	}
-	req.Header = d.header
-	resp, err := d.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("error pinging URL %q: %w", d.config.URL, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("invalid response status code: (%d) %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+	if d.config.ValidateConnection {
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, d.config.URL, nil)
+		if err != nil {
+			return fmt.Errorf("error creating HTTP request %q: %w", d.config.URL, err)
+		}
+		req.Header = d.header
+		resp, err := d.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("error pinging URL %q: %w", d.config.URL, err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("invalid response status code: (%d) %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+		}
 	}
 
 	return nil
@@ -123,6 +125,7 @@ func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int,
 	}
 	return len(records), nil
 }
+
 func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	URL, err := d.EvaluateURL(rec)
 	if err != nil {
@@ -134,6 +137,7 @@ func (d *Destination) getURL(rec opencdc.Record) (string, error) {
 	}
 	return URL, nil
 }
+
 func (d *Destination) EvaluateURL(rec opencdc.Record) (string, error) {
 	if d.urlTmpl == nil {
 		return d.config.URL, nil

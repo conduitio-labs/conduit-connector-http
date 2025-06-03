@@ -150,8 +150,10 @@ func (s *Source) Open(ctx context.Context, pos opencdc.Position) error {
 
 	s.client = &http.Client{}
 
-	if err := s.testConnection(ctx); err != nil {
-		return fmt.Errorf("failed connection test: %w", err)
+	if s.config.ValidateConnection {
+		if err := s.testConnection(ctx); err != nil {
+			return fmt.Errorf("failed connection test: %w", err)
+		}
 	}
 
 	s.limiter = rate.NewLimiter(rate.Every(s.config.PollingPeriod), 1)

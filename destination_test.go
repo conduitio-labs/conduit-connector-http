@@ -28,7 +28,10 @@ import (
 	"github.com/matryer/is"
 )
 
-var serverRunning bool
+var (
+	server        *http.Server
+	serverRunning bool
+)
 
 func TestMain(m *testing.M) {
 	runServer()
@@ -66,8 +69,9 @@ func TestDestination_Post(t *testing.T) {
 			After: opencdc.RawData(`{"id": "2", "name": "Item 2"}`),
 		},
 	}
-	_, err = dest.Write(ctx, []opencdc.Record{rec})
+	records, err := dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
+	is.Equal(records, 1)
 	_, ok := resources["2"]
 	is.True(ok)
 	is.True(resources["2"].Name == "Item 2")
@@ -92,11 +96,31 @@ func TestDestination_Delete(t *testing.T) {
 	err = dest.Open(ctx)
 	is.NoErr(err)
 	rec := opencdc.Record{}
-	_, err = dest.Write(ctx, []opencdc.Record{rec})
+	records, err := dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
+	is.Equal(records, 1)
 	_, ok := resources["1"]
 	// resource was deleted
 	is.True(!ok)
+}
+
+func TestDestination_ValidateConnection(t *testing.T) {
+	is := is.New(t)
+	// unused url
+	url := "http://localhost:8082/resource/1"
+	ctx := context.Background()
+	dest := NewDestination()
+	err := sdk.Util.ParseConfig(ctx,
+		map[string]string{
+			"url":                url,
+			"method":             "DELETE",
+			"validateConnection": "false", // don't validate connection
+		}, dest.Config(),
+		Connector.NewSpecification().DestinationParams,
+	)
+	is.NoErr(err)
+	err = dest.Open(ctx)
+	is.NoErr(err) // HEAD request won't be called
 }
 
 func TestDestination_DynamicURL(t *testing.T) {
@@ -124,8 +148,9 @@ func TestDestination_DynamicURL(t *testing.T) {
 	}
 	err = dest.Open(ctx)
 	is.NoErr(err)
-	_, err = dest.Write(ctx, []opencdc.Record{rec})
+	records, err := dest.Write(ctx, []opencdc.Record{rec})
 	is.NoErr(err)
+	is.Equal(records, 1)
 	_, ok := resources["3"]
 	// resource was deleted
 	is.True(!ok)
@@ -150,13 +175,15 @@ func runServer() {
 	serverRunning = true
 	address := ":8081"
 
-	http.HandleFunc("/resource", handleResource)
-	http.HandleFunc("/resource/", handleSingleResource)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/resource", handleResource)
+	mux.HandleFunc("/resource/", handleSingleResource)
 
-	server := &http.Server{
+	server = &http.Server{
 		Addr:         address,
-		ReadTimeout:  10 * time.Second, // Set your desired read timeout
-		WriteTimeout: 10 * time.Second, // Set your desired write timeout
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {

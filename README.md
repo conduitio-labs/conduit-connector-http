@@ -68,6 +68,11 @@ pipelines:
           # Type: string
           # Required: no
           script.parseResponse: ""
+          # ValidateConnection sends a HEAD request when opening the connector
+          # to check if the connection works.
+          # Type: bool
+          # Required: no
+          validateConnection: "true"
           # Maximum delay before an incomplete batch is read from the source.
           # Type: duration
           # Required: no
@@ -161,6 +166,11 @@ pipelines:
           # Type: string
           # Required: no
           params.*: ""
+          # ValidateConnection sends a HEAD request when opening the connector
+          # to check if the connection works.
+          # Type: bool
+          # Required: no
+          validateConnection: "true"
           # Maximum delay before an incomplete batch is written to the
           # destination.
           # Type: duration
