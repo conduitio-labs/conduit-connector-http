@@ -81,8 +81,8 @@ github.com/chzyer/readline v1.5.0/go.mod h1:x22KAscuvRqlLoK9CsoYsmxoXZMMFVyOl86c
 github.com/chzyer/test v0.0.0-20210722231415-061457976a23/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/ckaznocha/intrange v0.3.1 h1:j1onQyXvHUsPWujDH6WIjhyH26gkRt/txNlV7LspvJs=
 github.com/ckaznocha/intrange v0.3.1/go.mod h1:QVepyz1AkUoFQkpEqksSYpNpUo3c5W7nWh/s6SHIJJk=
-github.com/conduitio/conduit-commons v0.5.4 h1:O1j08gsC7Bf3Y0CbfIcpWz0719Ehx3GoHqVLItsOQbU=
-github.com/conduitio/conduit-commons v0.5.4/go.mod h1:GtxenYQA3eWPeH+rCdycHVO/zE9rngAmwRAlqvshL+8=
+github.com/conduitio/conduit-commons v0.6.0 h1:UgKXYAMEO3w759R5EmAP0Ax5yFWPGqvPMr/neltfsAI=
+github.com/conduitio/conduit-commons v0.6.0/go.mod h1:n+zdde8QZ+gX4m4tjv7qT1xomZSGZg/dpoTx/JR/fh4=
 github.com/conduitio/conduit-connector-protocol v0.9.4-0.20250522154900-3708d4f3a481 h1:kP/uM0ZdDeC8pdBp3q8y2tJD/h+EDbwyuHPU/+rwSeo=
 github.com/conduitio/conduit-connector-protocol v0.9.4-0.20250522154900-3708d4f3a481/go.mod h1:vssplKMGbYx7JvRcRpqiRzQIysn7GCj1J5kW/g/1GfE=
 github.com/conduitio/conduit-connector-sdk v0.14.0 h1:Icj/DDEvo3u83A7Q8vaJHlr0L7/C7ChrZWLr8bcy6XE=
