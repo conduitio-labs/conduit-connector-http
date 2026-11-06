@@ -17,6 +17,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -56,7 +57,27 @@ type DestinationConfig struct {
 
 	// HTTP method to use in the request
 	Method string `default:"POST" validate:"inclusion=POST|PUT|DELETE|PATCH"`
+
+	// RecordHeaders adds the record's identity to every request, so the
+	// receiver can tell which record a request is about and what happened to
+	// it: the header `X-Conduit-Operation` (create, update, delete or snapshot)
+	// and, when the record has a key, `X-Conduit-Key` (the key's bytes, base64
+	// encoded; a structured key is its JSON encoding). The request body is not
+	// changed, so a delete arrives with an empty body and these headers. Keys
+	// appear in request headers, which proxies and servers may log, and a very
+	// large key can exceed a server's header size limit. If you turn this off, a
+	// record without a payload.after body (a delete) cannot be sent with POST,
+	// PUT or PATCH and the write fails instead, because the request would carry
+	// neither a body nor a key.
+	RecordHeaders bool `json:"recordHeaders" default:"true"`
 }
+
+const (
+	// HeaderOperation carries the record's operation when RecordHeaders is set.
+	HeaderOperation = "X-Conduit-Operation"
+	// HeaderKey carries the base64 encoded record key when RecordHeaders is set.
+	HeaderKey = "X-Conduit-Key"
+)
 
 func (c *DestinationConfig) Validate(ctx context.Context) error {
 	var errs []error
@@ -161,8 +182,18 @@ func (d *Destination) EvaluateURL(rec opencdc.Record) (string, error) {
 
 func (d *Destination) sendRequest(ctx context.Context, record opencdc.Record) error {
 	var body io.Reader
-	if record.Payload.After != nil {
+	// A nil or empty After means the record has nothing to send as a body.
+	if record.Payload.After != nil && len(record.Payload.After.Bytes()) > 0 {
 		body = bytes.NewReader(record.Payload.After.Bytes())
+	} else if d.config.Method != http.MethodDelete && !d.config.RecordHeaders {
+		// A record without a payload.after body is a delete. Sending it would
+		// produce an empty request with no key, which the receiver cannot
+		// attribute to any record, so the delete would be lost without an error.
+		// Fail instead. A DELETE request has no body by design, and with
+		// RecordHeaders the request names the record.
+		return fmt.Errorf("record has no payload.after (operation %q) and would be sent as an empty %s "+
+			"request that identifies no record: set recordHeaders to true to send its key and operation, "+
+			"or drop deletes upstream", record.Operation, d.config.Method)
 	}
 	URL, err := d.getURL(record)
 	if err != nil {
@@ -174,6 +205,10 @@ func (d *Destination) sendRequest(ctx context.Context, record opencdc.Record) er
 		return fmt.Errorf("error creating HTTP %s request: %w", d.config.Method, err)
 	}
 	req.Header = d.header
+	if d.config.RecordHeaders {
+		// Per request copy: d.header is shared by every request.
+		req.Header = recordHeaders(d.header, record)
+	}
 
 	// get response
 	resp, err := d.client.Do(req)
@@ -186,6 +221,20 @@ func (d *Destination) sendRequest(ctx context.Context, record opencdc.Record) er
 		return fmt.Errorf("got an unexpected response status of %q", resp.Status)
 	}
 	return nil
+}
+
+// recordHeaders returns a copy of base with the record's operation and key.
+func recordHeaders(base http.Header, record opencdc.Record) http.Header {
+	h := base.Clone()
+	if h == nil {
+		h = http.Header{}
+	}
+	h.Set(HeaderOperation, record.Operation.String())
+	h.Del(HeaderKey) // never inherit a configured value for another record's key
+	if record.Key != nil {
+		h.Set(HeaderKey, base64.StdEncoding.EncodeToString(record.Key.Bytes()))
+	}
+	return h
 }
 
 func (d *Destination) Teardown(ctx context.Context) error {
