@@ -129,6 +129,147 @@ Note: The request `Body` that will be sent is the value under `record.Payload.Af
 of that or manipulate the field in any way, please check our [Builtin Processors Docs](https://conduit.io/docs/processors/builtin/)
 , or check [Standalone Processors Docs](https://conduit.io/docs/processors/standalone/) if you'd like to build your own processor .
 
+#### Record headers
+
+By default (`recordHeaders: true`) every request carries two headers that identify the record:
+
+- `X-Conduit-Operation`: `create`, `update`, `delete` or `snapshot`.
+- `X-Conduit-Key`: the record key's bytes, base64 (standard encoding) encoded. A structured key is its JSON encoding.
+  The header is omitted when the record has no key.
+
+The request body is unchanged. A record without `Payload.After` (a delete) is sent with an empty body, and the two
+headers tell the receiver which record it is and that it was deleted. With `method: DELETE` the request is bodiless by
+design (you can also put the id in the `url` template).
+
+Things to be aware of:
+
+- The key travels in a request header. Proxies, load balancers and servers may log headers, so do not use keys you
+  would not want in those logs.
+- A very large key can exceed a server's header size limit (commonly 8 KB), and the request will be rejected.
+- If you set `recordHeaders: false`, requests carry no record headers. A record that has no `Payload.After`, or an empty
+  one, then cannot be sent with `POST`, `PUT` or `PATCH`, because the request would carry neither a body nor a key. The
+  write fails with an error instead of sending an anonymous request. Only turn the option off if you accept that.
+
+### Configuration
+
+<!-- readmegen:source.parameters.yaml -->
+```yaml
+version: 2.2
+pipelines:
+  - id: example
+    status: running
+    connectors:
+      - id: example
+        plugin: "http"
+        settings:
+          # Http url to send requests to
+          # Type: string
+          # Required: yes
+          url: ""
+          # Http headers to use in the request, comma separated list of :
+          # separated pairs
+          # Type: string
+          # Required: no
+          headers: ""
+          # HTTP method to use in the request
+          # Type: string
+          # Required: no
+          method: "GET"
+          # parameters to use in the request, use params.* as the config key and
+          # specify its value, ex: set "params.id" as "1".
+          # Type: string
+          # Required: no
+          params.*: ""
+          # how often the connector will get data from the url
+          # Type: duration
+          # Required: no
+          pollingPeriod: "5m"
+          # The path to a .js file containing the code to prepare the request
+          # data. The signature of the function needs to be: `function
+          # getRequestData(cfg, previousResponse, position)` where: * `cfg` (a
+          # map) is the connector configuration * `previousResponse` (a map)
+          # contains data from the previous response (if any), returned by
+          # `parseResponse` * `position` (a byte array) contains the starting
+          # position of the connector. The function needs to return a Request
+          # object.
+          # Type: string
+          # Required: no
+          script.getRequestData: ""
+          # The path to a .js file containing the code to parse the response.
+          # The signature of the function needs to be: `function
+          # parseResponse(bytes)` where `bytes` are the original response's raw
+          # bytes (i.e. unparsed). The response should be a Response object.
+          # Type: string
+          # Required: no
+          script.parseResponse: ""
+          # ValidateConnection sends a HEAD request when opening the connector
+          # to check if the connection works.
+          # Type: bool
+          # Required: no
+          validateConnection: "true"
+          # Maximum delay before an incomplete batch is read from the source.
+          # Type: duration
+          # Required: no
+          sdk.batch.delay: "0"
+          # Maximum size of batch before it gets read from the source.
+          # Type: int
+          # Required: no
+          sdk.batch.size: "0"
+          # Specifies whether to use a schema context name. If set to false, no
+          # schema context name will be used, and schemas will be saved with the
+          # subject name specified in the connector (not safe because of name
+          # conflicts).
+          # Type: bool
+          # Required: no
+          sdk.schema.context.enabled: "true"
+          # Schema context name to be used. Used as a prefix for all schema
+          # subject names. If empty, defaults to the connector ID.
+          # Type: string
+          # Required: no
+          sdk.schema.context.name: ""
+          # Whether to extract and encode the record key with a schema.
+          # Type: bool
+          # Required: no
+          sdk.schema.extract.key.enabled: "true"
+          # The subject of the key schema. If the record metadata contains the
+          # field "opencdc.collection" it is prepended to the subject name and
+          # separated with a dot.
+          # Type: string
+          # Required: no
+          sdk.schema.extract.key.subject: "key"
+          # Whether to extract and encode the record payload with a schema.
+          # Type: bool
+          # Required: no
+          sdk.schema.extract.payload.enabled: "true"
+          # The subject of the payload schema. If the record metadata contains
+          # the field "opencdc.collection" it is prepended to the subject name
+          # and separated with a dot.
+          # Type: string
+          # Required: no
+          sdk.schema.extract.payload.subject: "payload"
+          # The type of the payload schema.
+          # Type: string
+          # Required: no
+          sdk.schema.extract.type: "avro"
+```
+<!-- /readmegen:source.parameters.yaml -->
+
+## Destination
+
+The HTTP destination connector pushes data from upstream resources to an HTTP URL via Conduit. the destination adds the
+`params` and `headers` to the request, and sends it to the URL with the specified `method` from the `Configuration`. 
+
+Note: The request `Body` that will be sent is the value under `record.Payload.After`, if you want to change the format
+of that or manipulate the field in any way, please check our [Builtin Processors Docs](https://conduit.io/docs/processors/builtin/)
+, or check [Standalone Processors Docs](https://conduit.io/docs/processors/standalone/) if you'd like to build your own processor .
+
+A record without `Payload.After` (a delete) has no body. With `method: DELETE` it is sent as a bodiless request, which
+is how a DELETE is normally addressed (put the id in the `url` template). With `POST`, `PUT` or `PATCH` such a request
+would carry neither a body nor a key, so the receiver could not tell which record it was about; the destination fails
+the write instead of sending it. Set `recordHeaders: true` to send `X-Conduit-Operation` (`create`, `update`,
+`delete` or `snapshot`) and `X-Conduit-Key` (the record key's bytes, base64 encoded) on every request: a delete then
+arrives with an empty body and the key that identifies it. Without `recordHeaders` the requests are unchanged.
+
 ### Configuration
 
 <!-- readmegen:destination.parameters.yaml -->
@@ -166,6 +307,21 @@ pipelines:
           # Type: string
           # Required: no
           params.*: ""
+          # RecordHeaders adds the record's identity to every request, so the
+          # receiver can tell which record a request is about and what happened
+          # to it: the header `X-Conduit-Operation` (create, update, delete or
+          # snapshot) and, when the record has a key, `X-Conduit-Key` (the key's
+          # bytes, base64 encoded; a structured key is its JSON encoding). The
+          # request body is not changed, so a delete arrives with an empty body
+          # and these headers. Keys appear in request headers, which proxies and
+          # servers may log, and a very large key can exceed a server's header
+          # size limit. If you turn this off, a record without a payload.after
+          # body (a delete) cannot be sent with POST, PUT or PATCH and the write
+          # fails instead, because the request would carry neither a body nor a
+          # key.
+          # Type: bool
+          # Required: no
+          recordHeaders: "true"
           # ValidateConnection sends a HEAD request when opening the connector
           # to check if the connection works.
           # Type: bool

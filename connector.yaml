@@ -153,6 +153,22 @@ specification:
         type: string
         default: ""
         validations: []
+      - name: recordHeaders
+        description: |-
+          RecordHeaders adds the record's identity to every request, so the
+          receiver can tell which record a request is about and what happened to
+          it: the header `X-Conduit-Operation` (create, update, delete or snapshot)
+          and, when the record has a key, `X-Conduit-Key` (the key's bytes, base64
+          encoded; a structured key is its JSON encoding). The request body is not
+          changed, so a delete arrives with an empty body and these headers. Keys
+          appear in request headers, which proxies and servers may log, and a very
+          large key can exceed a server's header size limit. If you turn this off, a
+          record without a payload.after body (a delete) cannot be sent with POST,
+          PUT or PATCH and the write fails instead, because the request would carry
+          neither a body nor a key.
+        type: bool
+        default: "true"
+        validations: []
       - name: validateConnection
         description: ValidateConnection sends a HEAD request when opening the connector to check if the connection works.
         type: bool
