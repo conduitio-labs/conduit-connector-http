@@ -231,10 +231,25 @@ func recordHeaders(base http.Header, record opencdc.Record) http.Header {
 	}
 	h.Set(HeaderOperation, record.Operation.String())
 	h.Del(HeaderKey) // never inherit a configured value for another record's key
-	if record.Key != nil {
-		h.Set(HeaderKey, base64.StdEncoding.EncodeToString(record.Key.Bytes()))
+	if key := keyBytes(record.Key); len(key) > 0 {
+		h.Set(HeaderKey, base64.StdEncoding.EncodeToString(key))
 	}
 	return h
+}
+
+// keyBytes returns the key's bytes, or nil when the record has no key. A nil
+// key, an empty raw key and a nil or empty structured key all mean "no key", so
+// the receiver never sees an empty header value or the encoding of JSON null.
+func keyBytes(key opencdc.Data) []byte {
+	switch k := key.(type) {
+	case nil:
+		return nil
+	case opencdc.StructuredData:
+		if len(k) == 0 {
+			return nil
+		}
+	}
+	return key.Bytes()
 }
 
 func (d *Destination) Teardown(ctx context.Context) error {
