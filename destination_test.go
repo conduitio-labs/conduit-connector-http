@@ -367,6 +367,48 @@ func TestDestination_DefaultHeadersOnInsertUpdateDelete(t *testing.T) {
 	is.Equal(dest.header.Get(HeaderKey), "")
 }
 
+// A statically configured X-Conduit-Key must not be sent for a record that has no
+// key: the receiver would attribute the record to the configured value.
+func TestDestination_StaticKeyHeaderNotSentForKeylessRecord(t *testing.T) {
+	is := is.New(t)
+	dest, rx := openCaptureDestination(t, map[string]string{"method": "POST", "headers": HeaderKey + ": static"})
+	rec := opencdc.Record{Operation: opencdc.OperationUpdate, Payload: opencdc.Change{After: opencdc.RawData(`{"a":1}`)}}
+	_, err := writeOne(t, dest, rec)
+	is.NoErr(err)
+	reqs := rx.requests()
+	is.Equal(len(reqs), 1)
+	_, hasKey := reqs[0].header[HeaderKey]
+	is.True(!hasKey)
+}
+
+// "No key" is unambiguous: nil, empty raw and typed-nil structured keys all send no
+// X-Conduit-Key header (not an empty value, not base64 of "null").
+func TestDestination_NoKeyShapesSendNoKeyHeader(t *testing.T) {
+	var nilStruct opencdc.StructuredData
+	cases := map[string]opencdc.Data{
+		"nil key":               nil,
+		"empty raw key":         opencdc.RawData(nil),
+		"empty non-nil raw key": opencdc.RawData([]byte{}),
+		"typed-nil structured":  nilStruct,
+		"empty structured key":  opencdc.StructuredData{},
+	}
+	for name, key := range cases {
+		t.Run(name, func(t *testing.T) {
+			is := is.New(t)
+			dest, rx := openCaptureDestination(t, map[string]string{"method": "POST"})
+			rec := opencdc.Record{Operation: opencdc.OperationUpdate, Key: key,
+				Payload: opencdc.Change{After: opencdc.RawData(`{"a":1}`)}}
+			_, err := writeOne(t, dest, rec)
+			is.NoErr(err)
+			reqs := rx.requests()
+			is.Equal(len(reqs), 1)
+			_, hasKey := reqs[0].header[HeaderKey]
+			is.True(!hasKey)
+			is.Equal(reqs[0].header.Get(HeaderOperation), "update")
+		})
+	}
+}
+
 // With recordHeaders explicitly off, a record without a body is never sent.
 func TestDestination_ExplicitFalseRejectsBodilessRecords(t *testing.T) {
 	cases := map[string]opencdc.Record{

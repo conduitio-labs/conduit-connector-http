@@ -135,7 +135,8 @@ By default (`recordHeaders: true`) every request carries two headers that identi
 
 - `X-Conduit-Operation`: `create`, `update`, `delete` or `snapshot`.
 - `X-Conduit-Key`: the record key's bytes, base64 (standard encoding) encoded. A structured key is its JSON encoding.
-  The header is omitted when the record has no key.
+  The header is present only when the record has a non-empty key. A nil key, an empty raw key and a nil or empty
+  structured key all count as "no key", and the header is then omitted (it is never sent empty).
 
 The request body is unchanged. A record without `Payload.After` (a delete) is sent with an empty body, and the two
 headers tell the receiver which record it is and that it was deleted. With `method: DELETE` the request is bodiless by
